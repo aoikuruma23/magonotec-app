@@ -331,6 +331,9 @@ function clearChatHistory() {
   // localStorageから削除
   localStorage.removeItem(STORAGE_KEY_MESSAGES);
 
+  // STEP18: インストール案内フラグもリセット（再度案内が出るように）
+  localStorage.removeItem(INSTALL_PROMPT_SHOWN_KEY);
+
   // メッセージを初期化
   initializeMessages();
 
