@@ -134,24 +134,41 @@ function showIOSInstallGuide() {
  * Androidのインストールを実行
  */
 async function triggerAndroidInstall() {
+  // プロンプトがまだ準備できていない場合は少し待つ
   if (!deferredInstallPrompt) {
-    // プロンプトがない場合は手動案内
-    const guideText = '【ホーム画面への追加方法】\n\n' +
-      '① 画面右上の「︙」（メニュー）を押してね\n\n' +
-      '② 「ホーム画面に追加」または「アプリをインストール」を押してね\n\n' +
-      'これでホーム画面からすぐ会えるようになるよ 😊';
-
-    const guideMessage = {
+    // 「準備中」メッセージを表示
+    const waitMessage = {
       id: generateId(),
       role: 'ai',
-      text: formatForSenior(guideText),
+      text: formatForSenior('ちょっと待ってね、準備しているよ... 🔄'),
       timestamp: getCurrentTimestamp()
     };
-
-    messages.push(guideMessage);
+    messages.push(waitMessage);
     saveMessagesToStorage();
     renderMessages();
-    return;
+
+    // 最大3秒待ってリトライ
+    await new Promise(resolve => setTimeout(resolve, 3000));
+
+    if (!deferredInstallPrompt) {
+      // それでもない場合は手動案内
+      const guideText = '【ホーム画面への追加方法】\n\n' +
+        '① 画面右上の「︙」（メニュー）を押してね\n\n' +
+        '② 「ホーム画面に追加」または「アプリをインストール」を押してね\n\n' +
+        'これでホーム画面からすぐ会えるようになるよ 😊';
+
+      const guideMessage = {
+        id: generateId(),
+        role: 'ai',
+        text: formatForSenior(guideText),
+        timestamp: getCurrentTimestamp()
+      };
+
+      messages.push(guideMessage);
+      saveMessagesToStorage();
+      renderMessages();
+      return;
+    }
   }
 
   // インストールプロンプトを表示
