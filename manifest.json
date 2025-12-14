@@ -1,0 +1,26 @@
+{
+  "name": "まごのTEC",
+  "short_name": "まごのTEC",
+  "description": "スマホやネットの「ちょっと困った」を、まごが説明するみたいにゆっくり案内するアプリ",
+  "start_url": "/magonotec-app/",
+  "display": "standalone",
+  "background_color": "#FFF5F5",
+  "theme_color": "#E8A0A0",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "assets/magonotec/logo/logo_magonotec_pink.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/magonotec/logo/logo_magonotec_pink.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "lang": "ja",
+  "categories": ["lifestyle", "utilities"]
+}
