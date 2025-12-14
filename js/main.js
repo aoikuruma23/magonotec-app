@@ -1148,10 +1148,8 @@ function scrollToBottom() {
       // 最後のメッセージ要素を取得
       const lastMessage = container.querySelector('.message-bubble:last-child');
       if (lastMessage) {
-        // 最後のメッセージの先頭位置までスクロール
-        // offsetTop: コンテナ内での要素の位置
-        const scrollPosition = lastMessage.offsetTop - 20; // 20pxの余白
-        container.scrollTop = scrollPosition;
+        // 先頭から読めるようにメッセージの頭に合わせてスクロール
+        lastMessage.scrollIntoView({ block: 'start', inline: 'nearest', behavior: 'auto' });
       } else {
         // メッセージがない場合は従来通り最下部へ
         container.scrollTop = container.scrollHeight;
