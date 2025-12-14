@@ -394,6 +394,15 @@ body {
   border-bottom-right-radius: 4px;
 }
 
+/* 吹き出し内の画像（送信した画像のサムネイル） */
+.message-image {
+  max-width: 200px;
+  max-height: 150px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  display: block;
+}
+
 /* ============================================
    キャラエリア（PC: 右カラム配置、幅1/4程度）
    ============================================ */

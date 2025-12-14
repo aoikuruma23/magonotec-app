@@ -879,10 +879,21 @@ function createMessageBubble(msg) {
     bubble.classList.add('system');
   }
 
+  // 画像があれば表示（ユーザーメッセージの場合）
+  if (msg.image) {
+    const img = document.createElement('img');
+    img.src = msg.image;
+    img.alt = '送信した画像';
+    img.className = 'message-image';
+    bubble.appendChild(img);
+  }
+
   // テキストを<p>タグで囲む（改行は<br>に変換）
-  const p = document.createElement('p');
-  p.innerHTML = escapeHtml(msg.text).replace(/\n/g, '<br>');
-  bubble.appendChild(p);
+  if (msg.text) {
+    const p = document.createElement('p');
+    p.innerHTML = escapeHtml(msg.text).replace(/\n/g, '<br>');
+    bubble.appendChild(p);
+  }
 
   return bubble;
 }
@@ -915,18 +926,18 @@ function handleUserMessage(text) {
 
   // ユーザーメッセージを追加（フォーマットは適用しない）
   // STEP15: 画像がある場合はその旨を表示
-  let displayText = trimmedText;
+  let displayText = trimmedText || '';
   if (pendingImage && !trimmedText) {
     displayText = '（画像を送信しました）';
-  } else if (pendingImage && trimmedText) {
-    displayText = trimmedText + '\n（画像を添付）';
   }
 
   const userMessage = {
     id: generateId(),
     role: 'user',
     text: displayText,
-    timestamp: getCurrentTimestamp()
+    timestamp: getCurrentTimestamp(),
+    // 画像があれば Data URL として保存（チャット履歴に表示用）
+    image: pendingImage ? `data:image/jpeg;base64,${pendingImage}` : null
   };
   messages.push(userMessage);
 
