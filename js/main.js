@@ -84,10 +84,15 @@ function showInstallPromptMessage() {
 
   const isIOSDevice = isIOS();
 
-  // やさしい言葉で案内
-  let messageText = 'ねえ、おばあちゃん（おじいちゃん）！\n\n';
+  // やさしい言葉で案内（デバイスによってメッセージを変える）
+  let messageText = 'ねぇねぇ！\n\n';
   messageText += 'またいつでも会えるように、スマホのホーム画面にボタンを作っておこうか？\n\n';
-  messageText += '下のボタンを押してね 👇';
+
+  if (isIOSDevice) {
+    messageText += 'やり方を教えるね。下のボタンを押してね 👇';
+  } else {
+    messageText += '下のボタンを押すと追加できるよ 👇';
+  }
 
   const installMessage = {
     id: generateId(),
@@ -1057,7 +1062,10 @@ function createMessageBubble(msg) {
   if (msg.isInstallPrompt) {
     const button = document.createElement('button');
     button.className = 'install-prompt-button';
-    button.textContent = '🏠 ホーム画面に追加する';
+    // iOSは手動手順が必要なのでボタン文言を変える
+    button.textContent = msg.isIOSDevice
+      ? '📖 やり方を見る'
+      : '🏠 ホーム画面に追加する';
     button.addEventListener('click', () => {
       handleInstallButtonClick(msg.isIOSDevice);
     });
