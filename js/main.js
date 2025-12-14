@@ -371,6 +371,12 @@ function clearChatHistory() {
 let pendingImage = null;
 
 /**
+ * リトライ用: 最後のリクエストパラメータ
+ */
+let lastRequestText = null;
+let lastRequestImage = null;
+
+/**
  * 画像アップロード機能のセットアップ
  */
 function setupImageUpload() {
@@ -1130,7 +1136,40 @@ function createMessageBubble(msg) {
     bubble.appendChild(button);
   }
 
+  // リトライボタンを追加（エラー時）
+  if (msg.showRetry) {
+    const retryButton = document.createElement('button');
+    retryButton.className = 'retry-button';
+    retryButton.textContent = '🔄 もう一度試す';
+    retryButton.addEventListener('click', () => {
+      retryLastRequest();
+    });
+    bubble.appendChild(retryButton);
+  }
+
   return bubble;
+}
+
+/**
+ * 最後のリクエストをリトライする
+ */
+function retryLastRequest() {
+  if (!lastRequestText && !lastRequestImage) {
+    console.warn('リトライするリクエストがありません');
+    return;
+  }
+
+  // エラーメッセージを削除（showRetryフラグがあるメッセージ）
+  const errorMsgIndex = messages.findIndex(msg => msg.showRetry);
+  if (errorMsgIndex !== -1) {
+    messages.splice(errorMsgIndex, 1);
+  }
+
+  // 画面を更新
+  renderMessages();
+
+  // 再度APIを呼び出す
+  scheduleAiReply(lastRequestText, lastRequestImage);
 }
 
 /**
@@ -1213,6 +1252,10 @@ function handleUserMessage(text) {
  * @param {string|null} image - Base64エンコードされた画像（オプション）
  */
 async function scheduleAiReply(userText, image = null) {
+  // リトライ用にパラメータを保存
+  lastRequestText = userText;
+  lastRequestImage = image;
+
   // ローディング表示を追加
   showLoadingIndicator();
 
@@ -1304,13 +1347,16 @@ async function scheduleAiReply(userText, image = null) {
 
     // STEP19: レート制限エラーの場合は専用メッセージ
     let fallbackText;
+    let showRetry = false;
+
     if (error.message === 'RATE_LIMIT') {
       fallbackText = 'ちょっと待ってね！\n\n' +
         'たくさんお話しすぎちゃったみたい。\n' +
         '1分くらい待ってから、また話しかけてね 😊';
+      // レート制限の場合はリトライボタンを表示しない
     } else {
-      fallbackText = 'ごめんね。今は、うまくお返事ができなかったよ。' +
-        '時間をおいてから、もう一度ためしてみてもらえるかな？';
+      fallbackText = 'ごめんね。今は、うまくお返事ができなかったよ。';
+      showRetry = true;  // その他のエラーはリトライ可能
     }
     const formattedFallback = formatForSenior(fallbackText);
 
@@ -1318,7 +1364,8 @@ async function scheduleAiReply(userText, image = null) {
       id: generateId(),
       role: 'ai',
       text: formattedFallback,
-      timestamp: getCurrentTimestamp()
+      timestamp: getCurrentTimestamp(),
+      showRetry: showRetry  // リトライボタン表示フラグ
     };
     messages.push(fallbackMessage);
 
