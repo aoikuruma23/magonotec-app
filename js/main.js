@@ -30,6 +30,164 @@
 const API_BASE_URL = 'https://magonotec-api.onrender.com';
 
 // ============================================
+// STEP18: PWAインストール案内（ホーム画面に追加）
+// ============================================
+
+/**
+ * PWAインストールプロンプト（Android Chrome用）
+ * @type {BeforeInstallPromptEvent|null}
+ */
+let deferredInstallPrompt = null;
+
+/**
+ * インストール案内を表示済みかどうか
+ */
+const INSTALL_PROMPT_SHOWN_KEY = 'magonotec_install_prompt_shown';
+
+/**
+ * PWAがインストール済みかどうか
+ */
+function isPwaInstalled() {
+  // スタンドアロンモードで動作中 = インストール済み
+  return window.matchMedia('(display-mode: standalone)').matches ||
+         window.navigator.standalone === true;
+}
+
+/**
+ * iOSかどうか判定
+ */
+function isIOS() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+}
+
+/**
+ * インストール案内を表示すべきか判定
+ */
+function shouldShowInstallPrompt() {
+  // すでにインストール済みなら表示しない
+  if (isPwaInstalled()) return false;
+
+  // すでに案内済みなら表示しない
+  if (localStorage.getItem(INSTALL_PROMPT_SHOWN_KEY) === 'true') return false;
+
+  return true;
+}
+
+/**
+ * ホーム画面追加の案内メッセージをチャットに表示
+ */
+function showInstallPromptMessage() {
+  if (!shouldShowInstallPrompt()) return;
+
+  // 案内済みフラグを立てる
+  localStorage.setItem(INSTALL_PROMPT_SHOWN_KEY, 'true');
+
+  const isIOSDevice = isIOS();
+
+  // やさしい言葉で案内
+  let messageText = 'ねえ、おばあちゃん（おじいちゃん）！\n\n';
+  messageText += 'またいつでも会えるように、スマホのホーム画面にボタンを作っておこうか？\n\n';
+  messageText += '下のボタンを押してね 👇';
+
+  const installMessage = {
+    id: generateId(),
+    role: 'ai',
+    text: formatForSenior(messageText),
+    timestamp: getCurrentTimestamp(),
+    isInstallPrompt: true,  // 特別なメッセージとしてマーク
+    isIOSDevice: isIOSDevice
+  };
+
+  messages.push(installMessage);
+  saveMessagesToStorage();
+  renderMessages();
+}
+
+/**
+ * iOSの手順案内を表示
+ */
+function showIOSInstallGuide() {
+  const guideText = '【ホーム画面への追加方法】\n\n' +
+    '① 画面の下にある「共有ボタン」（□に↑マーク）を押してね\n\n' +
+    '② 出てきたメニューを上にスクロールして「ホーム画面に追加」を押してね\n\n' +
+    '③ 右上の「追加」を押したら完了だよ！\n\n' +
+    'これでホーム画面からすぐ会えるようになるよ 😊';
+
+  const guideMessage = {
+    id: generateId(),
+    role: 'ai',
+    text: formatForSenior(guideText),
+    timestamp: getCurrentTimestamp()
+  };
+
+  messages.push(guideMessage);
+  saveMessagesToStorage();
+  renderMessages();
+}
+
+/**
+ * Androidのインストールを実行
+ */
+async function triggerAndroidInstall() {
+  if (!deferredInstallPrompt) {
+    // プロンプトがない場合は手動案内
+    const guideText = '【ホーム画面への追加方法】\n\n' +
+      '① 画面右上の「︙」（メニュー）を押してね\n\n' +
+      '② 「ホーム画面に追加」または「アプリをインストール」を押してね\n\n' +
+      'これでホーム画面からすぐ会えるようになるよ 😊';
+
+    const guideMessage = {
+      id: generateId(),
+      role: 'ai',
+      text: formatForSenior(guideText),
+      timestamp: getCurrentTimestamp()
+    };
+
+    messages.push(guideMessage);
+    saveMessagesToStorage();
+    renderMessages();
+    return;
+  }
+
+  // インストールプロンプトを表示
+  deferredInstallPrompt.prompt();
+
+  const result = await deferredInstallPrompt.userChoice;
+
+  if (result.outcome === 'accepted') {
+    const thankMessage = {
+      id: generateId(),
+      role: 'ai',
+      text: formatForSenior('ありがとう！これでホーム画面からいつでも会えるね 😊'),
+      timestamp: getCurrentTimestamp()
+    };
+    messages.push(thankMessage);
+    saveMessagesToStorage();
+    renderMessages();
+  }
+
+  deferredInstallPrompt = null;
+}
+
+/**
+ * インストールボタンのクリックハンドラ
+ */
+function handleInstallButtonClick(isIOSDevice) {
+  if (isIOSDevice) {
+    showIOSInstallGuide();
+  } else {
+    triggerAndroidInstall();
+  }
+}
+
+// beforeinstallpromptイベントをキャプチャ（Android Chrome用）
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  console.log('PWAインストールプロンプトをキャプチャしました');
+});
+
+// ============================================
 // キャラクター表情管理
 // ============================================
 
@@ -895,6 +1053,17 @@ function createMessageBubble(msg) {
     bubble.appendChild(p);
   }
 
+  // STEP18: インストール案内の場合はボタンを追加
+  if (msg.isInstallPrompt) {
+    const button = document.createElement('button');
+    button.className = 'install-prompt-button';
+    button.textContent = '🏠 ホーム画面に追加する';
+    button.addEventListener('click', () => {
+      handleInstallButtonClick(msg.isIOSDevice);
+    });
+    bubble.appendChild(button);
+  }
+
   return bubble;
 }
 
@@ -1042,6 +1211,11 @@ async function scheduleAiReply(userText, image = null) {
 
     // キャラを「安心」状態に（返信完了）
     setMascotState('relieved');
+
+    // STEP18: 初回AI返信後にインストール案内を表示（少し間を置く）
+    setTimeout(() => {
+      showInstallPromptMessage();
+    }, 2000);
 
   } catch (error) {
     console.error('scheduleAiReply error:', error);
