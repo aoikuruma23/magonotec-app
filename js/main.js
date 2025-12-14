@@ -1138,14 +1138,22 @@ function showScreen(screenId) {
 }
 
 /**
- * メッセージリストを最下部にスクロールする
+ * 最新メッセージの先頭が見えるようにスクロールする
  */
 function scrollToBottom() {
   const container = document.getElementById('chat-messages');
   if (container) {
     // 少し遅延させてDOMの更新を待つ
     setTimeout(() => {
-      container.scrollTop = container.scrollHeight;
+      // 最後のメッセージ要素を取得
+      const lastMessage = container.querySelector('.message-bubble:last-child');
+      if (lastMessage) {
+        // 最後のメッセージの先頭が見えるようにスクロール
+        lastMessage.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else {
+        // メッセージがない場合は従来通り最下部へ
+        container.scrollTop = container.scrollHeight;
+      }
     }, 50);
   }
 }
