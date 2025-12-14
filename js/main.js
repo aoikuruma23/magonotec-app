@@ -1177,15 +1177,8 @@ function setupChatEvents() {
     });
   }
 
-  // Enterキーで送信（Shift+Enterは改行として許可しない簡易版）
-  if (messageInput) {
-    messageInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        handleUserMessage(messageInput.value);
-      }
-    });
-  }
+  // Enterキーは改行（LINEと同じ挙動）
+  // 送信は送信ボタンのみ
 }
 
 /**
