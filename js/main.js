@@ -1285,14 +1285,25 @@ async function scheduleAiReply(userText, image = null) {
       console.log('画像付きリクエストを送信');
     }
 
+    // STEP20: タイムアウト処理（60秒）
+    const TIMEOUT_MS = 60000;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
     // APIを呼び出す
-    const response = await fetch(`${API_BASE_URL}/api/chat`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestBody),
-    });
+    let response;
+    try {
+      response = await fetch(`${API_BASE_URL}/api/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timeoutId);
+    }
 
     // レスポンスチェック
     if (!response.ok) {
@@ -1345,7 +1356,7 @@ async function scheduleAiReply(userText, image = null) {
     // キャラを「困惑」状態に（エラー発生）
     setMascotState('worried');
 
-    // STEP19: レート制限エラーの場合は専用メッセージ
+    // STEP19-20: エラー種別に応じた専用メッセージ
     let fallbackText;
     let showRetry = false;
 
@@ -1354,6 +1365,12 @@ async function scheduleAiReply(userText, image = null) {
         'たくさんお話しすぎちゃったみたい。\n' +
         '1分くらい待ってから、また話しかけてね 😊';
       // レート制限の場合はリトライボタンを表示しない
+    } else if (error.name === 'AbortError') {
+      // STEP20: タイムアウトエラー
+      fallbackText = 'ごめんね、ちょっと時間がかかりすぎちゃったみたい。\n\n' +
+        '電波の調子が悪いのかもしれないね。\n' +
+        'もう一度試してみてね 😊';
+      showRetry = true;  // タイムアウトはリトライ可能
     } else {
       fallbackText = 'ごめんね。今は、うまくお返事ができなかったよ。';
       showRetry = true;  // その他のエラーはリトライ可能
