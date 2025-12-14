@@ -1212,6 +1212,10 @@ async function scheduleAiReply(userText, image = null) {
 
     // レスポンスチェック
     if (!response.ok) {
+      // STEP19: レート制限エラーの場合は特別なメッセージ
+      if (response.status === 429) {
+        throw new Error('RATE_LIMIT');
+      }
       throw new Error(`API error: ${response.status}`);
     }
 
@@ -1251,9 +1255,16 @@ async function scheduleAiReply(userText, image = null) {
     // キャラを「困惑」状態に（エラー発生）
     setMascotState('worried');
 
-    // フォールバックメッセージを表示
-    const fallbackText = 'ごめんね。今は、うまくお返事ができなかったよ。' +
-      '時間をおいてから、もう一度ためしてみてもらえるかな？';
+    // STEP19: レート制限エラーの場合は専用メッセージ
+    let fallbackText;
+    if (error.message === 'RATE_LIMIT') {
+      fallbackText = 'ちょっと待ってね！\n\n' +
+        'たくさんお話しすぎちゃったみたい。\n' +
+        '1分くらい待ってから、また話しかけてね 😊';
+    } else {
+      fallbackText = 'ごめんね。今は、うまくお返事ができなかったよ。' +
+        '時間をおいてから、もう一度ためしてみてもらえるかな？';
+    }
     const formattedFallback = formatForSenior(fallbackText);
 
     const fallbackMessage = {
