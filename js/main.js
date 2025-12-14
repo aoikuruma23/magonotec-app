@@ -1017,6 +1017,44 @@ function formatForSenior(text) {
 }
 
 // ============================================
+// ローディング表示
+// ============================================
+
+const LOADING_INDICATOR_ID = 'loading-indicator';
+
+/**
+ * ローディング表示を追加
+ */
+function showLoadingIndicator() {
+  const container = document.getElementById('chat-messages');
+  if (!container) return;
+
+  // 既存のローディング表示があれば削除
+  hideLoadingIndicator();
+
+  // ローディング用の吹き出しを作成
+  const loadingBubble = document.createElement('div');
+  loadingBubble.id = LOADING_INDICATOR_ID;
+  loadingBubble.className = 'message-bubble ai loading';
+  loadingBubble.innerHTML = '<p class="loading-text">考え中<span class="loading-dots"></span></p>';
+
+  container.appendChild(loadingBubble);
+
+  // スクロール
+  scrollToBottom();
+}
+
+/**
+ * ローディング表示を削除
+ */
+function hideLoadingIndicator() {
+  const loadingElement = document.getElementById(LOADING_INDICATOR_ID);
+  if (loadingElement) {
+    loadingElement.remove();
+  }
+}
+
+// ============================================
 // メッセージ描画
 // ============================================
 
@@ -1175,6 +1213,9 @@ function handleUserMessage(text) {
  * @param {string|null} image - Base64エンコードされた画像（オプション）
  */
 async function scheduleAiReply(userText, image = null) {
+  // ローディング表示を追加
+  showLoadingIndicator();
+
   try {
     // キャラを「考え中」状態に（handleUserMessageでも設定しているが、念のため）
     setMascotState('thinking');
@@ -1226,6 +1267,9 @@ async function scheduleAiReply(userText, image = null) {
     // 高齢者向けフォーマットを適用
     const formattedReply = formatForSenior(rawReply);
 
+    // ローディング表示を消す
+    hideLoadingIndicator();
+
     // メッセージを追加
     const aiMessage = {
       id: generateId(),
@@ -1251,6 +1295,9 @@ async function scheduleAiReply(userText, image = null) {
 
   } catch (error) {
     console.error('scheduleAiReply error:', error);
+
+    // ローディング表示を消す
+    hideLoadingIndicator();
 
     // キャラを「困惑」状態に（エラー発生）
     setMascotState('worried');
