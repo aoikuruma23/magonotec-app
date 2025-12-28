@@ -30,6 +30,11 @@
  */
 const API_BASE_URL = 'https://magonotec-api.onrender.com';
 
+/**
+ * STEP17-B: Payment Link URL（課金ページ）
+ */
+const PAYMENT_LINK_URL = 'https://buy.stripe.com/9B65kDgFxbhk0Asf4c6Ri00';
+
 // ============================================
 // STEP17b: 家族課金ペアリング
 // ============================================
@@ -66,6 +71,37 @@ function initPairing() {
  */
 function getPairingId() {
   return localStorage.getItem(STORAGE_KEY_PAIRING_ID);
+}
+
+/**
+ * STEP17-B: 有効なペアリングがあるかチェック
+ * @returns {boolean}
+ */
+function hasValidPairing() {
+  const pairingId = getPairingId();
+  return pairingId !== null && pairingId.length > 0;
+}
+
+/**
+ * STEP17-B: 未登録メッセージを表示（API呼び出しなし）
+ */
+function showUnregisteredMessage() {
+  const messageText = 'このチャットは、ご家族の登録が必要だよ。\n\n届いたリンクから開いてね。\n\nわからなければ、ご家族に聞いてみてね。';
+
+  const unregisteredMessage = {
+    id: generateId(),
+    role: 'ai',
+    text: formatForSenior(messageText),
+    timestamp: getCurrentTimestamp(),
+    showRegisterButton: true  // 登録ボタン表示フラグ
+  };
+
+  messages.push(unregisteredMessage);
+  saveMessagesToStorage();
+  renderMessages();
+
+  // キャラを通常状態に
+  setMascotState('normal');
 }
 
 /**
@@ -1206,6 +1242,17 @@ function createMessageBubble(msg) {
     bubble.appendChild(retryButton);
   }
 
+  // STEP17-B: 登録ページボタン（未登録ユーザー向け）
+  if (msg.showRegisterButton) {
+    const registerButton = document.createElement('button');
+    registerButton.className = 'register-button';
+    registerButton.textContent = '📝 登録ページを開く';
+    registerButton.addEventListener('click', () => {
+      window.open(PAYMENT_LINK_URL, '_blank');
+    });
+    bubble.appendChild(registerButton);
+  }
+
   return bubble;
 }
 
@@ -1254,6 +1301,25 @@ function handleUserMessage(text) {
   // 空文字チェック（STEP15: 画像がある場合は空文字でもOK）
   const trimmedText = text.trim();
   if (!trimmedText && !pendingImage) {
+    return;
+  }
+
+  // STEP17-B: ペアリングチェック（未登録なら送信ブロック）
+  if (!hasValidPairing()) {
+    // ユーザーの入力は表示する
+    const userMessage = {
+      id: generateId(),
+      role: 'user',
+      text: trimmedText || '（画像を送信しました）',
+      timestamp: getCurrentTimestamp(),
+      image: pendingImage ? `data:image/jpeg;base64,${pendingImage}` : null
+    };
+    messages.push(userMessage);
+    clearInput();
+    clearPendingImage();
+
+    // 未登録メッセージを表示（API呼び出しなし）
+    showUnregisteredMessage();
     return;
   }
 
@@ -1335,9 +1401,12 @@ async function scheduleAiReply(userText, image = null) {
       }));
 
     // STEP15: リクエストボディを構築（画像がある場合は含める）
+    // STEP17-B: pairing_idを必ず含める
+    const pairingId = getPairingId();
     const requestBody = {
       message: userText,
       history: historyForApi,
+      pairing_id: pairingId,
     };
     if (image) {
       requestBody.image = image;

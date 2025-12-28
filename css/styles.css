@@ -453,6 +453,30 @@ body {
   transform: translateY(1px);
 }
 
+/* STEP17-B: 登録ボタン（未登録ユーザー向け） */
+.register-button {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  padding: 14px 16px;
+  font-size: 17px;
+  font-weight: bold;
+  color: var(--color-white);
+  background-color: var(--color-primary);
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.1s;
+}
+
+.register-button:hover {
+  background-color: #e85a00;
+}
+
+.register-button:active {
+  transform: translateY(1px);
+}
+
 /* ローディング表示（AI返信待ち） */
 .message-bubble.loading {
   min-width: 100px;
