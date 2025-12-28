@@ -15,6 +15,7 @@
  * STEP15: 画像共有機能（スクショ送信）
  * STEP16: 音声入力機能（Web Speech API）
  * STEP17: 会話履歴の永続化（localStorage）
+ * STEP17b: 家族課金ペアリング（?pair=パラメータ）
  *
  * このファイルでは画面遷移とメッセージ管理のロジックを実装。
  */
@@ -28,6 +29,64 @@
  * 本番環境では適切なURLに変更すること
  */
 const API_BASE_URL = 'https://magonotec-api.onrender.com';
+
+// ============================================
+// STEP17b: 家族課金ペアリング
+// ============================================
+
+/**
+ * localStorageのキー（ペアリングID）
+ */
+const STORAGE_KEY_PAIRING_ID = 'magonotec_pairing_id';
+
+/**
+ * URLパラメータからpairing_idを取得し、localStorageに保存
+ * @returns {string|null} pairing_id
+ */
+function initPairing() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const pairParam = urlParams.get('pair');
+
+  if (pairParam) {
+    // URLにpair=がある場合、localStorageに保存
+    localStorage.setItem(STORAGE_KEY_PAIRING_ID, pairParam);
+    console.log('ペアリングIDを保存しました:', pairParam);
+
+    // URLからパラメータを削除（見た目をクリーンに）
+    const cleanUrl = window.location.origin + window.location.pathname;
+    window.history.replaceState({}, document.title, cleanUrl);
+  }
+
+  return localStorage.getItem(STORAGE_KEY_PAIRING_ID);
+}
+
+/**
+ * 現在のpairing_idを取得
+ * @returns {string|null}
+ */
+function getPairingId() {
+  return localStorage.getItem(STORAGE_KEY_PAIRING_ID);
+}
+
+/**
+ * 利用日を記録するAPIを呼び出す
+ * @param {string} pairingId
+ */
+async function recordUsage(pairingId) {
+  try {
+    await fetch(`${API_BASE_URL}/api/usage/record`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ pairing_id: pairingId }),
+    });
+    console.log('利用記録を送信しました');
+  } catch (error) {
+    // エラーは無視（ユーザー体験に影響させない）
+    console.warn('利用記録の送信に失敗:', error);
+  }
+}
 
 // ============================================
 // STEP18: PWAインストール案内（ホーム画面に追加）
@@ -1336,6 +1395,12 @@ async function scheduleAiReply(userText, image = null) {
     // STEP17: 会話履歴を保存
     saveMessagesToStorage();
 
+    // STEP17b: 利用記録を送信（ペアリング済みの場合）
+    const pairingId = getPairingId();
+    if (pairingId) {
+      recordUsage(pairingId);
+    }
+
     // 描画を更新
     renderMessages();
 
@@ -1521,6 +1586,9 @@ function setupChatEvents() {
  */
 function init() {
   console.log('まごのTEC を初期化しています...');
+
+  // STEP17b: ペアリング処理（URLパラメータ ?pair= を確認）
+  initPairing();
 
   // STEP17: 会話履歴を復元（なければ初期化）
   if (!loadMessagesFromStorage()) {
