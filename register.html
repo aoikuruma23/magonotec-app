@@ -398,13 +398,21 @@
       const familyEmail = familyEmailInput.value.trim();
       const seniorName = seniorNameInput.value.trim();
 
+      // バリデーション
       if (!familyEmail) {
         showError('メールアドレスを入力してください。');
         return;
       }
 
+      if (!agreeCheckbox.checked) {
+        showError('注意事項に同意してください。');
+        return;
+      }
+
+      // ローディング表示
       showLoading();
       submitButton.disabled = true;
+      console.log('[register] Sending request to API...');
 
       try {
         const response = await fetch(`${API_BASE_URL}/api/billing/create-checkout-session`, {
@@ -419,21 +427,40 @@
           }),
         });
 
+        console.log('[register] Response status:', response.status);
+
         if (!response.ok) {
-          const data = await response.json();
-          throw new Error(data.detail || 'エラーが発生しました');
+          let errorDetail = 'エラーが発生しました';
+          try {
+            const data = await response.json();
+            errorDetail = data.detail || errorDetail;
+          } catch (jsonError) {
+            errorDetail = `HTTP ${response.status}: ${response.statusText}`;
+          }
+          throw new Error(errorDetail);
         }
 
         const data = await response.json();
+        console.log('[register] Success, redirecting to Stripe...');
 
         // Stripe Checkoutへリダイレクト
         window.location.href = data.checkout_url;
 
       } catch (error) {
-        console.error('Error:', error);
+        console.error('[register] Error:', error);
         hideLoading();
         submitButton.disabled = false;
-        showError(error.message || '接続エラーが発生しました。しばらくしてからお試しください。');
+        validateForm(); // ボタン状態を再評価
+
+        // エラーメッセージを判定
+        let userMessage = error.message;
+        if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+          userMessage = 'サーバーに接続できませんでした。インターネット接続を確認してください。';
+        } else if (error.message.includes('NetworkError')) {
+          userMessage = 'ネットワークエラーが発生しました。しばらくしてからお試しください。';
+        }
+
+        showError(userMessage);
       }
     }
 
