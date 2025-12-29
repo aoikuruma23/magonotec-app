@@ -31,9 +31,9 @@
 const API_BASE_URL = 'https://magonotec-api.onrender.com';
 
 /**
- * STEP17-B: Payment Link URL（課金ページ）
+ * STEP18: 登録ページURL（PAYMENT_LINKではなくregister.htmlへ誘導）
  */
-const PAYMENT_LINK_URL = 'https://buy.stripe.com/9B65kDgFxbhk0Asf4c6Ri00';
+const REGISTER_URL = 'https://aoikuruma23.github.io/magonotec-app/register.html';
 
 // ============================================
 // STEP17b: 家族課金ペアリング
@@ -1242,13 +1242,13 @@ function createMessageBubble(msg) {
     bubble.appendChild(retryButton);
   }
 
-  // STEP17-B: 登録ページボタン（未登録ユーザー向け）
+  // STEP18: 登録ページボタン（未登録ユーザー向け）
   if (msg.showRegisterButton) {
     const registerButton = document.createElement('button');
     registerButton.className = 'register-button';
     registerButton.textContent = '📝 登録ページを開く';
     registerButton.addEventListener('click', () => {
-      window.open(PAYMENT_LINK_URL, '_blank');
+      window.open(REGISTER_URL, '_blank');
     });
     bubble.appendChild(registerButton);
   }
