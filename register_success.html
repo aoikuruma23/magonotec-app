@@ -425,8 +425,11 @@
 
         const data = await response.json();
 
-        // pairing URLを生成
+        // pairing URLを生成（STEP19: ニックネームも含める）
         pairingUrl = `${APP_BASE_URL}/?pair=${data.pairing_id}`;
+        if (data.senior_name) {
+          pairingUrl += `&name=${encodeURIComponent(data.senior_name)}`;
+        }
 
         // UIを更新
         pairingUrlBox.textContent = pairingUrl;

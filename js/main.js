@@ -16,6 +16,11 @@
  * STEP16: 音声入力機能（Web Speech API）
  * STEP17: 会話履歴の永続化（localStorage）
  * STEP17b: 家族課金ペアリング（?pair=パラメータ）
+ * STEP19: 感情フレーバー（名前呼び）機能
+ *   - 記念日トリガー（1/1, 3/3, 12/24, 12/31）
+ *   - 久しぶりトリガー（3日/7日/14日以上）
+ *   - 別れ際トリガー（ばいばい/またね/さよなら/おやすみ/終わり）
+ *   - 日常の愛着ワンフレーズ（10%確率、1日1回制限）
  *
  * このファイルでは画面遷移とメッセージ管理のロジックを実装。
  */
@@ -45,17 +50,30 @@ const REGISTER_URL = 'https://aoikuruma23.github.io/magonotec-app/register.html'
 const STORAGE_KEY_PAIRING_ID = 'magonotec_pairing_id';
 
 /**
+ * STEP19: localStorageのキー（ニックネーム）
+ */
+const STORAGE_KEY_SENIOR_NAME = 'magonotec_senior_name';
+
+/**
  * URLパラメータからpairing_idを取得し、localStorageに保存
+ * STEP19: senior_nameも保存
  * @returns {string|null} pairing_id
  */
 function initPairing() {
   const urlParams = new URLSearchParams(window.location.search);
   const pairParam = urlParams.get('pair');
+  const nameParam = urlParams.get('name');
 
   if (pairParam) {
     // URLにpair=がある場合、localStorageに保存
     localStorage.setItem(STORAGE_KEY_PAIRING_ID, pairParam);
     console.log('ペアリングIDを保存しました:', pairParam);
+
+    // STEP19: ニックネームも保存
+    if (nameParam) {
+      localStorage.setItem(STORAGE_KEY_SENIOR_NAME, nameParam);
+      console.log('ニックネームを保存しました:', nameParam);
+    }
 
     // URLからパラメータを削除（見た目をクリーンに）
     const cleanUrl = window.location.origin + window.location.pathname;
@@ -1042,6 +1060,299 @@ function sendAutoGreeting(slot) {
   console.log(`オート挨拶送信 [${season}/${slot}]: ${text}`);
 }
 
+// ============================================
+// STEP19: 感情フレーバー（名前呼び）機能
+// ============================================
+
+/**
+ * STEP19: 最終会話日のlocalStorageキー
+ */
+const STORAGE_KEY_LAST_TALK_DATE = 'magonotec_last_talk_date';
+
+/**
+ * STEP19: 感情フレーバー使用済みフラグのキープレフィックス
+ */
+const STORAGE_KEY_EMOTION_USED_PREFIX = 'emotion_used_';
+const STORAGE_KEY_ANNIV_USED_PREFIX = 'emotion_anniv_used_';
+
+/**
+ * STEP19: ニックネームを取得する
+ * @returns {string} ニックネーム（未設定なら空文字）
+ */
+function getSeniorName() {
+  return localStorage.getItem(STORAGE_KEY_SENIOR_NAME) || '';
+}
+
+/**
+ * STEP19: 確率で名前を使うか判断する（40%）
+ * @returns {boolean}
+ */
+function shouldUseName() {
+  return Math.random() < 0.4;
+}
+
+/**
+ * STEP19: 今日の日付をYYYY-MM-DD形式で取得
+ * @returns {string}
+ */
+function getTodayDateString() {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+/**
+ * STEP19: その日のフレーバー使用済みかチェック
+ * @param {string} prefix - キープレフィックス
+ * @returns {boolean}
+ */
+function isEmotionUsedToday(prefix = STORAGE_KEY_EMOTION_USED_PREFIX) {
+  const key = prefix + getTodayDateString();
+  return localStorage.getItem(key) === 'used';
+}
+
+/**
+ * STEP19: その日のフレーバー使用済みフラグを立てる
+ * @param {string} prefix - キープレフィックス
+ */
+function markEmotionUsedToday(prefix = STORAGE_KEY_EMOTION_USED_PREFIX) {
+  const key = prefix + getTodayDateString();
+  localStorage.setItem(key, 'used');
+}
+
+/**
+ * STEP19: 記念日メッセージを取得（該当日のみ）
+ * @returns {string|null}
+ */
+function getAnniversaryGreeting() {
+  // 今日すでに記念日メッセージを出した場合はスキップ
+  if (isEmotionUsedToday(STORAGE_KEY_ANNIV_USED_PREFIX)) {
+    return null;
+  }
+
+  const today = new Date();
+  const month = today.getMonth() + 1;
+  const day = today.getDate();
+  const dateKey = `${month}/${day}`;
+
+  const name = getSeniorName();
+  const useName = shouldUseName() && name;
+
+  // 記念日テンプレート
+  const anniversaryMessages = {
+    '1/1': useName
+      ? `${name}、あけましておめでとう🎍\n今年も、気が向いたらお話しようね。`
+      : 'あけましておめでとう🎍\n今年も気が向いたらお話しようね。',
+    '3/3': useName
+      ? `ひな祭りだね🌸\n${name}、今日はやさしい気分で話そ。`
+      : 'ひな祭りだね🌸\n今日はやさしい気分で話そ。',
+    '12/24': useName
+      ? `${name}、メリークリスマス🎄\n今日も少しお話できたらうれしいな。`
+      : 'メリークリスマス🎄\n今日も少しお話できたらうれしいな。',
+    '12/31': useName
+      ? `大晦日だね。\n今年いちばん良かったのは、${name}とお話できたこと。ありがとう😊`
+      : '大晦日だね。\n今年もお話できてありがとう😊'
+  };
+
+  const message = anniversaryMessages[dateKey];
+  if (message) {
+    markEmotionUsedToday(STORAGE_KEY_ANNIV_USED_PREFIX);
+    return message;
+  }
+
+  return null;
+}
+
+/**
+ * STEP19: 久しぶりメッセージを取得（会話間隔トリガー）
+ * @returns {string|null}
+ */
+function getLongtimeNoSeeGreeting() {
+  // 今日すでにフレーバーを出した場合はスキップ
+  if (isEmotionUsedToday()) {
+    return null;
+  }
+
+  const lastTalkDate = localStorage.getItem(STORAGE_KEY_LAST_TALK_DATE);
+  if (!lastTalkDate) {
+    return null;
+  }
+
+  // 日数差を計算（時刻は使わない）
+  const today = new Date(getTodayDateString());
+  const last = new Date(lastTalkDate);
+  const diffMs = today - last;
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays < 3) {
+    return null;
+  }
+
+  const name = getSeniorName();
+  const useName = shouldUseName() && name;
+
+  let message = null;
+
+  if (diffDays >= 14) {
+    message = useName
+      ? `${name}、今日は会えてちょっと特別な気分だよ。`
+      : '今日は会えてちょっと特別な気分だよ。';
+  } else if (diffDays >= 7) {
+    message = useName
+      ? `久しぶりだね、${name}。今日もゆっくり話そ。`
+      : '久しぶりだね。今日もゆっくり話そ。';
+  } else if (diffDays >= 3) {
+    message = useName
+      ? `${name}、また話せてうれしいな😊`
+      : 'また話せてうれしいな😊';
+  }
+
+  if (message) {
+    markEmotionUsedToday();
+  }
+
+  return message;
+}
+
+/**
+ * STEP19: 別れ際の追加文を取得
+ * @param {string} userText - ユーザーの入力テキスト
+ * @returns {string|null}
+ */
+function getFarewellAddition(userText) {
+  if (!userText) return null;
+
+  // 別れ際ワード
+  const farewellWords = ['ばいばい', 'またね', 'さよなら', 'おやすみ', '終わり', 'ありがとう'];
+  const lowerText = userText.toLowerCase();
+
+  const isFarewell = farewellWords.some(word => lowerText.includes(word));
+  if (!isFarewell) {
+    return null;
+  }
+
+  const name = getSeniorName();
+  const useName = shouldUseName() && name;
+
+  // 別れ際の追加文（ランダムで名前入り/なし）
+  if (useName) {
+    return `\n\n${name}、お話できて楽しかったよ。\nまた、気が向いたら来てね😊`;
+  } else {
+    return '\n\nお話できて楽しかったよ。\nまた、気が向いたら来てね😊';
+  }
+}
+
+/**
+ * STEP19: 日常の愛着ワンフレーズを取得（10%確率、1日1回）
+ * @returns {string|null}
+ */
+function getRandomAffectionPhrase() {
+  // 今日すでにフレーバーを出した場合はスキップ
+  if (isEmotionUsedToday()) {
+    return null;
+  }
+
+  // 10%の確率
+  if (Math.random() >= 0.10) {
+    return null;
+  }
+
+  const name = getSeniorName();
+  const useName = shouldUseName() && name;
+
+  // 愛着フレーズ候補
+  const phrases = useName
+    ? [
+        `${name}、いつでもここにいるよ。`,
+        '話してくれてありがとう😊',
+        '今日もえらいね。'
+      ]
+    : [
+        'いつでもここにいるよ。',
+        '話してくれてありがとう😊',
+        '今日もえらいね。'
+      ];
+
+  const phrase = phrases[Math.floor(Math.random() * phrases.length)];
+  markEmotionUsedToday();
+
+  return '\n\n' + phrase;
+}
+
+/**
+ * STEP19: 最終会話日を更新
+ */
+function updateLastTalkDate() {
+  localStorage.setItem(STORAGE_KEY_LAST_TALK_DATE, getTodayDateString());
+}
+
+/**
+ * STEP19: AIの返信に感情フレーバーを付加する（統合関数）
+ *
+ * 優先順位:
+ * 1. 記念日トリガー（初回のみ、返信の前に表示）
+ * 2. 久しぶりトリガー（初回のみ、返信の前に表示）
+ * 3. 別れ際トリガー（該当時、返信の後に追加）
+ * 4. 日常の愛着フレーズ（10%確率、返信の後に追加）
+ *
+ * @param {string} replyText - AIの返信テキスト
+ * @param {string} userText - ユーザーの入力テキスト
+ * @param {boolean} isFirstReplyOfDay - その日の初回AI返信かどうか
+ * @returns {{prefixMessage: string|null, modifiedReply: string}}
+ */
+function maybeAddEmotionFlavor(replyText, userText, isFirstReplyOfDay) {
+  let prefixMessage = null;
+  let modifiedReply = replyText;
+
+  // 1. 記念日トリガー（その日の初回のみ）
+  if (isFirstReplyOfDay) {
+    const annivMsg = getAnniversaryGreeting();
+    if (annivMsg) {
+      prefixMessage = annivMsg;
+    }
+  }
+
+  // 2. 久しぶりトリガー（その日の初回のみ、記念日がなければ）
+  if (isFirstReplyOfDay && !prefixMessage) {
+    const longtimeMsg = getLongtimeNoSeeGreeting();
+    if (longtimeMsg) {
+      prefixMessage = longtimeMsg;
+    }
+  }
+
+  // 3. 別れ際トリガー（必ず追加）
+  const farewellAdd = getFarewellAddition(userText);
+  if (farewellAdd) {
+    modifiedReply = replyText + farewellAdd;
+  }
+
+  // 4. 日常の愛着フレーズ（別れ際でない場合のみ、10%確率）
+  if (!farewellAdd) {
+    const affectionAdd = getRandomAffectionPhrase();
+    if (affectionAdd) {
+      modifiedReply = replyText + affectionAdd;
+    }
+  }
+
+  return { prefixMessage, modifiedReply };
+}
+
+/**
+ * STEP19: その日の初回AI返信かどうかを判定
+ * @returns {boolean}
+ */
+function isFirstAiReplyOfDay() {
+  const lastTalkDate = localStorage.getItem(STORAGE_KEY_LAST_TALK_DATE);
+  const today = getTodayDateString();
+  return lastTalkDate !== today;
+}
+
+// ============================================
+// ユーティリティ関数
+// ============================================
+
 /**
  * ユニークIDを生成する
  * @returns {string}
@@ -1446,11 +1757,28 @@ async function scheduleAiReply(userText, image = null) {
     const data = await response.json();
     const rawReply = data.reply || '教えてくれてありがとうだよ。もう一度、少しだけ教えてもらえるかな？';
 
-    // 高齢者向けフォーマットを適用
-    const formattedReply = formatForSenior(rawReply);
+    // STEP19: その日の初回AI返信かどうかを判定
+    const isFirstReply = isFirstAiReplyOfDay();
+
+    // STEP19: 感情フレーバーを適用
+    const { prefixMessage, modifiedReply } = maybeAddEmotionFlavor(rawReply, userText, isFirstReply);
 
     // ローディング表示を消す
     hideLoadingIndicator();
+
+    // STEP19: 記念日/久しぶりメッセージがあれば先に表示
+    if (prefixMessage) {
+      const prefixAiMessage = {
+        id: generateId(),
+        role: 'ai',
+        text: formatForSenior(prefixMessage),
+        timestamp: getCurrentTimestamp()
+      };
+      messages.push(prefixAiMessage);
+    }
+
+    // 高齢者向けフォーマットを適用
+    const formattedReply = formatForSenior(modifiedReply);
 
     // メッセージを追加
     const aiMessage = {
@@ -1464,8 +1792,10 @@ async function scheduleAiReply(userText, image = null) {
     // STEP17: 会話履歴を保存
     saveMessagesToStorage();
 
+    // STEP19: 最終会話日を更新
+    updateLastTalkDate();
+
     // STEP17b: 利用記録を送信（ペアリング済みの場合）
-    const pairingId = getPairingId();
     if (pairingId) {
       recordUsage(pairingId);
     }
