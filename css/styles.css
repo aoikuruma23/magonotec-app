@@ -462,15 +462,16 @@ body {
   font-size: 17px;
   font-weight: bold;
   color: var(--color-white);
-  background-color: var(--color-primary);
+  background-color: #E67E22;
   border: none;
   border-radius: 10px;
   cursor: pointer;
   transition: background-color 0.2s, transform 0.1s;
+  box-shadow: 0 3px 8px rgba(230, 126, 34, 0.4);
 }
 
 .register-button:hover {
-  background-color: #e85a00;
+  background-color: #D35400;
 }
 
 .register-button:active {
