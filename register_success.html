@@ -12,6 +12,12 @@
   <!-- QRコード生成ライブラリ -->
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <style>
+    /* 成功ページ専用: bodyのoverflow:hiddenを解除 */
+    html, body {
+      overflow: auto !important;
+      height: auto !important;
+    }
+
     /* 成功ページ専用スタイル */
     .success-screen {
       min-height: 100vh;
