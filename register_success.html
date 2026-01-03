@@ -236,11 +236,16 @@
       padding: 14px 32px;
       font-size: 16px;
       font-weight: bold;
-      color: var(--color-white);
-      background: var(--color-primary);
+      color: #ffffff;
+      background: #E67E22;
       border: none;
       border-radius: 10px;
       cursor: pointer;
+      box-shadow: 0 3px 8px rgba(230, 126, 34, 0.4);
+    }
+
+    .retry-button:hover {
+      background: #D35400;
     }
 
     @keyframes spin {
@@ -391,6 +396,13 @@
 
     // QRコード生成
     function generateQRCode(url) {
+      // QRCodeライブラリが読み込まれているか確認
+      if (typeof QRCode === 'undefined') {
+        console.warn('QRCode library not loaded');
+        qrCodeContainer.innerHTML = '<p style="color: #999; font-size: 14px;">QRコードは上のリンクをコピーしてお使いください</p>';
+        return;
+      }
+
       QRCode.toCanvas(url, {
         width: 180,
         margin: 2,
