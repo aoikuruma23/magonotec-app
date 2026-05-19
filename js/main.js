@@ -1750,6 +1750,10 @@ async function scheduleAiReply(userText, image = null) {
       if (response.status === 429) {
         throw new Error('RATE_LIMIT');
       }
+      // 400 (pairing_id欠如/形式不正) / 403 (有効なsubscriptionなし) は未登録導線へ
+      if (response.status === 400 || response.status === 403) {
+        throw new Error('UNREGISTERED');
+      }
       throw new Error(`API error: ${response.status}`);
     }
 
@@ -1823,8 +1827,14 @@ async function scheduleAiReply(userText, image = null) {
     // STEP19-20: エラー種別に応じた専用メッセージ
     let fallbackText;
     let showRetry = false;
+    let showRegisterButton = false;
 
-    if (error.message === 'RATE_LIMIT') {
+    if (error.message === 'UNREGISTERED') {
+      // 400/403: pairing_id無効・未登録など。固定文言で登録導線へ
+      fallbackText = 'ご家族の登録が確認できなかったよ。\n\nわからなければ、ご家族に聞いてみてね。';
+      showRegisterButton = true;
+      // リトライボタンは出さない
+    } else if (error.message === 'RATE_LIMIT') {
       fallbackText = 'ちょっと待ってね！\n\n' +
         'たくさんお話しすぎちゃったみたい。\n' +
         '1分くらい待ってから、また話しかけてね 😊';
@@ -1846,7 +1856,8 @@ async function scheduleAiReply(userText, image = null) {
       role: 'ai',
       text: formattedFallback,
       timestamp: getCurrentTimestamp(),
-      showRetry: showRetry  // リトライボタン表示フラグ
+      showRetry: showRetry,  // リトライボタン表示フラグ
+      showRegisterButton: showRegisterButton  // 登録ボタン表示フラグ
     };
     messages.push(fallbackMessage);
 
