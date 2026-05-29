@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>プライバシーポリシー - まごのTEC</title>
+
+  <meta name="theme-color" content="#E8A0A0">
+  <meta name="description" content="まごのTEC プライバシーポリシー">
+
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/legal.css">
+</head>
+<body>
+  <div class="legal-screen">
+    <header class="legal-header">
+      <a href="index.html" class="legal-header__logo">まごのTEC</a>
+    </header>
+
+    <main class="legal-container">
+      <h1 class="legal-title">プライバシーポリシー</h1>
+      <p class="legal-subtitle">最終更新日：2026年5月26日</p>
+
+      <article class="legal-content">
+        <p>自分改革ラボ（以下「当方」）は、サービス「まごのTEC」（以下「本サービス」）における利用者の個人情報を適切に取り扱うため、本プライバシーポリシーを定めます。</p>
+
+        <h2>1. 取得する情報</h2>
+        <p>当方は、本サービスの提供にあたり、以下の情報を取得します。</p>
+        <ul>
+          <li><strong>ご家族のメールアドレス</strong>：登録時に取得。週次利用日数のお知らせと、重要なお知らせの送信に利用します。</li>
+          <li><strong>利用者のニックネーム（任意）</strong>：週次メールの件名に表示するため。本名でなくニックネームの利用を推奨します。</li>
+          <li><strong>決済関連情報</strong>：Stripe（決済代行）を通じて取得します。<strong>クレジットカード番号等は当方では一切保持しません</strong>。Stripe側でPCI DSS準拠の管理がなされます。</li>
+          <li><strong>サービス利用日</strong>：利用された「日付（カレンダー日）」のみを記録します。会話の時刻や内容は記録しません。</li>
+          <li><strong>システム内部識別子（pairing_id）</strong>：個人を直接特定する情報ではなく、ご家族の登録と利用者端末を結びつけるためのランダム識別子です。</li>
+        </ul>
+
+        <h2>2. 取得しない情報</h2>
+        <p>本サービスは、以下の情報を取得・サーバー保存しません。</p>
+        <ul>
+          <li><strong>会話履歴</strong>：利用者と「まごちゃん」とのチャット内容は、利用者端末のブラウザ内（localStorage）にのみ保存され、当方のサーバーには送信・保存されません。</li>
+          <li><strong>音声・画像データ</strong>：音声入力や画像送信機能を利用した場合も、内容の永続保存は行いません。AI応答生成のために一時的に処理し、応答完了後は廃棄されます。</li>
+          <li><strong>位置情報・電話番号・住所</strong>：取得しません。</li>
+        </ul>
+        <p>なお、会話内容に個人情報（本名・住所・口座番号・パスワード等）を入力しないようご注意ください。</p>
+
+        <h2>3. 利用目的</h2>
+        <p>取得した情報は、以下の目的でのみ利用します。</p>
+        <ul>
+          <li>本サービスの提供および運営</li>
+          <li>週次利用日数のメール送信</li>
+          <li>料金の決済処理</li>
+          <li>お問い合わせへの対応</li>
+          <li>本サービスの改善および新機能の検討（個人を識別しない統計情報として）</li>
+          <li>不正利用の防止、利用規約違反の調査</li>
+        </ul>
+
+        <h2>4. 第三者への提供・委託</h2>
+        <p>当方は、利用者の同意なく個人情報を第三者に提供しません。ただし、本サービスの運営に必要な範囲で、以下の事業者に業務を委託しています。</p>
+        <dl>
+          <dt>Stripe, Inc.（米国）</dt>
+          <dd>決済処理。Stripeのプライバシーポリシーが適用されます。</dd>
+          <dt>Resend, Inc.（米国）</dt>
+          <dd>メール送信（独自ドメイン認証済、東京リージョン経由）。</dd>
+          <dt>Render Services, Inc.（米国）</dt>
+          <dd>アプリケーションホスティングおよびデータベース。</dd>
+          <dt>Anthropic, PBC（米国）</dt>
+          <dd>会話文の応答生成（Claude APIを利用）。送信される内容は、ご家族のメールアドレス等の個人情報を含みません。</dd>
+        </dl>
+        <p>各委託先とは、個人情報の適切な取り扱いに関する契約または利用規約上の合意があります。</p>
+
+        <h2>5. 法令に基づく開示</h2>
+        <p>以下の場合には、利用者の同意なく個人情報を開示することがあります。</p>
+        <ul>
+          <li>法令に基づく場合</li>
+          <li>人の生命、身体または財産の保護のために必要があり、本人の同意を得ることが困難であるとき</li>
+          <li>裁判所、検察庁、警察等の公的機関から正式な要請を受けた場合</li>
+        </ul>
+
+        <h2>6. 安全管理措置</h2>
+        <ul>
+          <li>通信はすべてHTTPS/TLSで暗号化しています</li>
+          <li>データベースへのアクセスは認証・権限管理を行い、当方のみが操作できます</li>
+          <li>決済情報は当方サーバーを経由せず、Stripeに直接送信されます</li>
+          <li>送信メールは独自ドメイン認証（SPF/DKIM）を施しています</li>
+        </ul>
+        <p>詳細は<a href="security.html">セキュリティページ</a>もあわせてご参照ください。</p>
+
+        <h2>7. 開示・訂正・削除のご請求</h2>
+        <p>利用者ご本人またはそのご家族からの個人情報の開示・訂正・削除のご請求については、下記お問い合わせ先までメールにてご連絡ください。ご本人確認のうえ、合理的な範囲で速やかに対応します。</p>
+
+        <h2>8. Cookie・localStorage の利用</h2>
+        <p>本サービスでは、ご家族の登録情報（pairing_id）および会話履歴の保存のためにブラウザのlocalStorageを使用します。トラッキング目的のCookie・アクセス解析ツールは現時点では利用していません。</p>
+
+        <h2>9. プライバシーポリシーの変更</h2>
+        <p>当方は、法令の改正やサービス内容の変更に応じて本ポリシーを改定することがあります。重要な変更を行う場合は、本画面または登録メールアドレス宛に事前にお知らせします。</p>
+
+        <h2>10. お問い合わせ</h2>
+        <p>個人情報の取り扱いに関するお問い合わせは、下記までお願いします。<br>
+        メール：<a href="mailto:jibunkaikakulab@gmail.com?subject=%E3%80%90%E3%81%BE%E3%81%94%E3%81%AETEC%E3%80%91%E5%80%8B%E4%BA%BA%E6%83%85%E5%A0%B1%E3%81%AB%E3%81%A4%E3%81%84%E3%81%A6">jibunkaikakulab@gmail.com</a></p>
+      </article>
+
+      <footer class="legal-footer">
+        <nav class="legal-footer__nav">
+          <a href="terms.html">利用規約</a>
+          <a href="privacy.html">プライバシーポリシー</a>
+          <a href="tokutei.html">特定商取引法に基づく表記</a>
+          <a href="security.html">セキュリティ</a>
+          <a href="index.html">トップへ</a>
+        </nav>
+        <div>© 2026 自分改革ラボ</div>
+      </footer>
+    </main>
+  </div>
+</body>
+</html>

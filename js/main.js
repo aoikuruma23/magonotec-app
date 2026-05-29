@@ -412,6 +412,13 @@ function setMascotState(state) {
  */
 let messages = [];
 
+/**
+ * 当セッションで対話が開始されたか（チップ押下 or メッセージ送信）
+ * アプリ起動毎に false にリセット → 起動直後は必ず相談開始カードが表示される
+ * 「新しい相談を始める」でも false に戻る
+ */
+let chatInteractionStarted = false;
+
 // ============================================
 // STEP17: 会話履歴の永続化
 // ============================================
@@ -466,6 +473,9 @@ function clearChatHistory() {
 
   // メッセージを初期化
   initializeMessages();
+
+  // 対話開始フラグをリセット → 相談開始カード再表示
+  chatInteractionStarted = false;
 
   // 画面を更新
   renderMessages();
@@ -1474,6 +1484,9 @@ function hideLoadingIndicator() {
  * messages 配列の内容を画面に描画する
  */
 function renderMessages() {
+  // ヘルパー表示はコンテナ有無に依存しないので先に必ず実行
+  updateChatHelperVisibility();
+
   const container = document.getElementById('chat-messages');
   if (!container) {
     console.error('メッセージコンテナが見つかりません');
@@ -1491,6 +1504,23 @@ function renderMessages() {
 
   // 描画後にスクロール
   scrollToBottom();
+}
+
+/**
+ * 当セッションのフラグに従ってチャットヘルパーカードの表示を切り替える
+ * - chatInteractionStarted === false なら表示（初回起動、新しい相談押下後）
+ * - チップ押下 or 送信ボタン押下で true → CSS で非表示
+ * - 過去の messages.length に依存しない（オート挨拶や localStorage 残骸の影響を受けない）
+ */
+function updateChatHelperVisibility() {
+  const chatScreen = document.getElementById('screen-chat');
+  if (!chatScreen) return;
+
+  if (chatInteractionStarted) {
+    chatScreen.classList.add('screen--chat-active');
+  } else {
+    chatScreen.classList.remove('screen--chat-active');
+  }
 }
 
 /**
@@ -1614,6 +1644,9 @@ function handleUserMessage(text) {
   if (!trimmedText && !pendingImage) {
     return;
   }
+
+  // 対話開始フラグを立てる（相談開始カードを非表示に）
+  chatInteractionStarted = true;
 
   // STEP17-B: ペアリングチェック（未登録なら送信ブロック）
   if (!hasValidPairing()) {
@@ -1941,6 +1974,8 @@ function showScreen(screenId) {
       renderMessages();
       // STEP12: オート挨拶をセットアップ
       setupAutoGreetings();
+      // ヘルパー表示を確実に同期（renderMessages失敗時の保険）
+      updateChatHelperVisibility();
     }
   } else {
     console.error(`画面が見つかりません: ${screenId}`);
@@ -2012,6 +2047,8 @@ function init() {
   const btnStartChat = document.getElementById('btn-start-chat');
   if (btnStartChat) {
     btnStartChat.addEventListener('click', () => {
+      // ホームから入場時は相談開始カードを再表示（指示書: 戻る/ホーム経由で再表示可）
+      chatInteractionStarted = false;
       showScreen('screen-chat');
     });
   }
@@ -2044,7 +2081,7 @@ function init() {
   // STEP16: 音声入力機能の初期化
   setupVoiceInput();
 
-  // STEP17: 新しい相談を始めるボタン
+  // STEP17: 新しい相談を始めるボタン（チャットヘルパー内のみ）
   const btnNewChat = document.getElementById('btn-new-chat');
   if (btnNewChat) {
     btnNewChat.addEventListener('click', () => {
@@ -2083,7 +2120,10 @@ function setupChatHelperChips() {
         messageInput.value = template;
         // 入力欄にフォーカスを当てる
         messageInput.focus();
-        console.log(`チップ押下: ${template}`);
+        // 対話開始フラグを立てて相談開始カードを即時非表示
+        chatInteractionStarted = true;
+        const chatScreen = document.getElementById('screen-chat');
+        if (chatScreen) chatScreen.classList.add('screen--chat-active');
       }
     });
   });

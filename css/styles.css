@@ -275,6 +275,12 @@ body {
 /* ============================================
    チャットヘルパー（カテゴリ選択UI）
    ============================================ */
+
+/* 対話開始後はヘルパー領域を完全に隠す */
+.screen--chat-active .chat-helper {
+  display: none !important;
+}
+
 .chat-helper {
   padding: 16px;
   margin: 0 16px 12px;

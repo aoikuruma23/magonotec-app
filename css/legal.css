@@ -1,0 +1,183 @@
+/* ============================================
+   まごのTEC 法規ページ共通スタイル
+   terms / privacy / tokutei / security
+   ============================================ */
+
+html, body {
+  overflow: auto !important;
+  height: auto !important;
+}
+
+.legal-screen {
+  min-height: 100vh;
+  background: var(--color-bg);
+  padding: 0;
+}
+
+.legal-header {
+  background: var(--color-white);
+  padding: 16px 20px;
+  text-align: center;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.legal-header__logo {
+  font-size: 22px;
+  font-weight: bold;
+  color: var(--color-pink-dark);
+  text-decoration: none;
+}
+
+.legal-container {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 32px 20px 8px;
+}
+
+.legal-title {
+  font-size: 26px;
+  font-weight: bold;
+  color: var(--color-text);
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.legal-subtitle {
+  font-size: 14px;
+  color: var(--color-text-light);
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.legal-content {
+  background: var(--color-white);
+  border-radius: 16px;
+  padding: 28px 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  font-size: 15px;
+  line-height: 1.85;
+  color: var(--color-text);
+}
+
+.legal-content h2 {
+  font-size: 17px;
+  font-weight: bold;
+  color: var(--color-text);
+  margin-top: 28px;
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 2px solid var(--color-border);
+}
+
+.legal-content h2:first-child {
+  margin-top: 0;
+}
+
+.legal-content p {
+  margin-bottom: 12px;
+}
+
+.legal-content ul,
+.legal-content ol {
+  padding-left: 22px;
+  margin-bottom: 12px;
+}
+
+.legal-content li {
+  margin-bottom: 6px;
+}
+
+.legal-content dl {
+  margin-bottom: 12px;
+}
+
+.legal-content dt {
+  font-weight: bold;
+  color: var(--color-text);
+  margin-top: 14px;
+  font-size: 14px;
+}
+
+.legal-content dd {
+  margin-left: 0;
+  color: var(--color-text);
+  margin-bottom: 4px;
+}
+
+.legal-content a {
+  color: var(--color-pink-dark);
+  text-decoration: underline;
+}
+
+.legal-content a:hover {
+  opacity: 0.8;
+}
+
+.legal-footer {
+  text-align: center;
+  padding: 28px 20px 48px;
+  font-size: 13px;
+  color: var(--color-text-light);
+}
+
+.legal-footer__nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 14px 18px;
+  margin-bottom: 12px;
+}
+
+.legal-footer__nav a {
+  color: var(--color-text-light);
+  text-decoration: none;
+}
+
+.legal-footer__nav a:hover {
+  color: var(--color-pink-dark);
+  text-decoration: underline;
+}
+
+/* ============================================
+   既存ページ用：控えめなフッターリンク
+   register.html / register_success.html / index.html
+   ============================================ */
+.site-footer {
+  text-align: center;
+  padding: 20px 16px 28px;
+  font-size: 12px;
+  color: var(--color-text-light);
+  line-height: 1.7;
+}
+
+.site-footer__nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 14px;
+  margin-bottom: 8px;
+}
+
+.site-footer__nav a {
+  color: var(--color-text-light);
+  text-decoration: none;
+}
+
+.site-footer__nav a:hover {
+  color: var(--color-pink-dark);
+  text-decoration: underline;
+}
+
+/* ホーム画面のフッターは画面下端に固定気味で控えめに */
+.site-footer--home {
+  flex-shrink: 0;
+  padding: 12px 16px 16px;
+  background: var(--color-bg);
+  border-top: 1px solid var(--color-border);
+}
+
+.site-footer--home .site-footer__nav {
+  gap: 6px 12px;
+  margin-bottom: 0;
+  font-size: 11px;
+}

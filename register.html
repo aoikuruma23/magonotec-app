@@ -9,6 +9,7 @@
   <meta name="description" content="まごのTEC - ご家族登録ページ">
 
   <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/legal.css">
   <style>
     /* 登録ページ専用: bodyのoverflow:hiddenを解除 */
     html, body {
@@ -56,6 +57,8 @@
       text-align: center;
       margin-bottom: 32px;
       line-height: 1.6;
+      word-break: keep-all;
+      overflow-wrap: break-word;
     }
 
     .register-form {
@@ -262,7 +265,7 @@
     <main class="register-container">
       <h1 class="register-title">ご家族登録</h1>
       <p class="register-subtitle">
-        スマホの操作から、生活の手続き・日常の"わからない"まで。<br>
+        スマホの操作から、生活・日常の"わからない"まで。<br>
         まごちゃんに気軽に聞けるようになります。
       </p>
 
@@ -311,7 +314,11 @@
           <input type="checkbox" id="agree-terms" class="form-checkbox" required>
           <label for="agree-terms" class="form-checkbox-label">
             会話内容は記録しません。共有は「週に何日使ったか」のみ。<br>
-            個人情報は入力しないでください。
+            個人情報は入力しないでください。<br>
+            <a href="terms.html" target="_blank" rel="noopener" style="color:#FF9999;">利用規約</a>
+            ・
+            <a href="privacy.html" target="_blank" rel="noopener" style="color:#FF9999;">プライバシーポリシー</a>
+            に同意します。
           </label>
         </div>
 
@@ -338,6 +345,16 @@
         <a href="index.html" class="register-footer__link">
           アプリのトップページへ
         </a>
+      </footer>
+
+      <footer class="site-footer">
+        <nav class="site-footer__nav">
+          <a href="terms.html">利用規約</a>
+          <a href="privacy.html">プライバシーポリシー</a>
+          <a href="tokutei.html">特定商取引法に基づく表記</a>
+          <a href="security.html">セキュリティ</a>
+        </nav>
+        <div>© 2026 自分改革ラボ</div>
       </footer>
     </main>
   </div>

@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>セキュリティ - まごのTEC</title>
+
+  <meta name="theme-color" content="#E8A0A0">
+  <meta name="description" content="まごのTEC セキュリティと信頼性">
+
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/legal.css">
+</head>
+<body>
+  <div class="legal-screen">
+    <header class="legal-header">
+      <a href="index.html" class="legal-header__logo">まごのTEC</a>
+    </header>
+
+    <main class="legal-container">
+      <h1 class="legal-title">セキュリティと信頼性について</h1>
+      <p class="legal-subtitle">最終更新日：2026年5月26日</p>
+
+      <article class="legal-content">
+        <p>まごのTECは、高齢のご家族にも安心してお使いいただけるよう、必要最小限の情報のみを取得し、シンプルで堅牢な設計を心がけています。</p>
+
+        <h2>1. 個人情報を最小限に</h2>
+        <ul>
+          <li>会員登録に必要なのは <strong>ご家族のメールアドレス</strong> のみ。氏名・住所・電話番号は取得しません。</li>
+          <li>利用者のお名前はニックネーム（任意）で十分です。</li>
+          <li>会話内容は<strong>サーバーに送信・保存されません</strong>。利用者端末のブラウザ内（localStorage）にのみ保存されます。</li>
+        </ul>
+
+        <h2>2. パスワードのいらない認証方式</h2>
+        <p>本サービスはアカウント・パスワードを必要としません。ご家族の登録後にお送りする「ご利用URL」をご家族のスマートフォンで開くだけで、ご利用を開始できます。URL内のランダムな識別子（pairing_id）により、ご家族ごとに正しく利用状態を管理します。</p>
+
+        <h2>3. 通信の暗号化</h2>
+        <ul>
+          <li>本サービスとサーバー間のすべての通信はHTTPS/TLSで暗号化されています。</li>
+          <li>サードパーティ（決済・メール送信・AI応答生成）への通信もすべてTLS経由です。</li>
+        </ul>
+
+        <h2>4. 決済情報の取り扱い</h2>
+        <ul>
+          <li>クレジットカード決済はStripe, Inc.が処理します。</li>
+          <li><strong>カード番号は当方サーバーを経由せず、Stripeに直接送信されます。</strong>当方ではカード情報を一切保持しません。</li>
+          <li>StripeはPCI DSS（カード業界セキュリティ基準）の最高レベル（Level 1）に準拠しています。</li>
+        </ul>
+
+        <h2>5. メール送信</h2>
+        <ul>
+          <li>送信元は当方独自ドメイン <code>noreply@magonotec.com</code> です。</li>
+          <li>SPF・DKIMによる送信ドメイン認証を施しています。</li>
+          <li>送信は東京リージョン（Resend経由）で行われます。</li>
+          <li>週次レポートには「先週何日ご利用されたか」のみを記載し、会話内容は一切含みません。</li>
+        </ul>
+
+        <h2>6. サーバーとデータベース</h2>
+        <ul>
+          <li>アプリケーションサーバーおよびPostgreSQLデータベースはRender Services, Inc.のインフラを利用しています。</li>
+          <li>データベースに保存される情報は、ご家族のメールアドレス、利用者ニックネーム（任意）、pairing_id、サブスクリプション状態、利用日付（カレンダー日のみ）に限られます。</li>
+          <li>アクセスは認証情報による厳格な権限管理のもと、当方のみが操作できます。</li>
+        </ul>
+
+        <h2>7. AI応答生成</h2>
+        <ul>
+          <li>会話の応答生成にはAnthropic, PBCの「Claude API」を利用します。</li>
+          <li>送信される内容は会話の文面のみで、ご家族のメールアドレスやお支払い情報は一切送信されません。</li>
+          <li>個人情報（本名・住所・口座番号・パスワード等）は会話に含めないようご注意ください。</li>
+        </ul>
+
+        <h2>8. データの保管期間</h2>
+        <ul>
+          <li>ご家族のメールアドレス・利用日数：サブスクリプションが解約され、当該期間が終了するまで保管します。</li>
+          <li>解約後は速やかに削除します。</li>
+          <li>会話履歴：ご利用端末のブラウザ内のみに保存され、ブラウザのデータを消去すると同時に削除されます。</li>
+        </ul>
+
+        <h2>9. 個人情報の開示・削除のご請求</h2>
+        <p>お客様ご本人またはそのご家族からの個人情報の開示・訂正・削除のご請求は、下記までメールにてお願いします。ご本人確認のうえ、速やかに対応いたします。</p>
+
+        <h2>10. お問い合わせ</h2>
+        <p>セキュリティに関するお問い合わせ、または脆弱性情報のご報告は、下記までお願いします。<br>
+        メール：<a href="mailto:jibunkaikakulab@gmail.com?subject=%E3%80%90%E3%81%BE%E3%81%94%E3%81%AETEC%E3%80%91%E3%82%BB%E3%82%AD%E3%83%A5%E3%83%AA%E3%83%86%E3%82%A3%E3%81%AB%E3%81%A4%E3%81%84%E3%81%A6">jibunkaikakulab@gmail.com</a></p>
+      </article>
+
+      <footer class="legal-footer">
+        <nav class="legal-footer__nav">
+          <a href="terms.html">利用規約</a>
+          <a href="privacy.html">プライバシーポリシー</a>
+          <a href="tokutei.html">特定商取引法に基づく表記</a>
+          <a href="security.html">セキュリティ</a>
+          <a href="index.html">トップへ</a>
+        </nav>
+        <div>© 2026 自分改革ラボ</div>
+      </footer>
+    </main>
+  </div>
+</body>
+</html>
