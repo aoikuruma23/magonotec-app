@@ -162,9 +162,34 @@
     .register-price {
       text-align: center;
       margin-top: 20px;
-      padding: 16px;
+      padding: 20px 16px 16px;
       background: var(--color-bg);
       border-radius: 10px;
+      position: relative;
+    }
+
+    .register-price__trial-badge {
+      display: inline-block;
+      background: #E8A0A0;
+      color: white;
+      font-size: 14px;
+      font-weight: bold;
+      padding: 6px 16px;
+      border-radius: 999px;
+      margin-bottom: 8px;
+    }
+
+    .register-price__trial-headline {
+      font-size: 20px;
+      font-weight: bold;
+      color: var(--color-text);
+      margin: 0 0 12px;
+    }
+
+    .register-price__after {
+      font-size: 14px;
+      color: var(--color-text-secondary);
+      margin-bottom: 4px;
     }
 
     .register-price__amount {
@@ -182,6 +207,7 @@
       font-size: 13px;
       color: var(--color-text-secondary);
       margin-top: 8px;
+      line-height: 1.6;
     }
 
     .register-footer {
@@ -271,7 +297,7 @@
 
       <!-- キャンセル時のメッセージ -->
       <div id="canceled-message" class="register-canceled" style="display: none;">
-        お支払いがキャンセルされました。<br>
+        お申し込みがキャンセルされました。<br>
         もう一度お試しください。
       </div>
 
@@ -329,14 +355,20 @@
           style="display:block; width:100%; padding:20px; margin-top:20px; font-size:18px; font-weight:bold; color:white; background-color:#E8A0A0; border:none; border-radius:12px; cursor:pointer;"
           disabled
         >
-          次へ（支払いへ進む）
+          30日間無料ではじめる
         </button>
 
         <div class="register-price">
-          <span class="register-price__amount">980</span>
-          <span class="register-price__unit">円/月</span>
+          <div class="register-price__trial-badge">最初の30日間は無料</div>
+          <p class="register-price__trial-headline">まずは無料で試してみる</p>
+          <p class="register-price__after">
+            トライアル終了後：
+            <span class="register-price__amount">980</span><span class="register-price__unit">円/月</span>
+          </p>
           <p class="register-price__note">
-            いつでも解約できます
+            カード情報の登録が必要です。<br>
+            30日間は無料、それ以降は自動で月額980円になります。<br>
+            <strong>いつでも解約できます</strong>（トライアル中の解約なら課金されません）。
           </p>
         </div>
       </form>
