@@ -459,6 +459,40 @@ body {
   transform: translateY(1px);
 }
 
+/* STEP24: 読み上げボタン（AI回答の下。押しやすいが本文より目立たせない） */
+.speak-button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-top: 10px;
+  padding: 6px 14px;
+  font-size: 15px;
+  color: var(--color-text);
+  background-color: rgba(255, 255, 255, 0.7);
+  border: 1px solid var(--color-pink);
+  border-radius: 22px;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.1s;
+}
+
+.speak-button:hover {
+  background-color: var(--color-white);
+}
+
+.speak-button:active {
+  transform: translateY(1px);
+}
+
+.speak-button[aria-pressed="true"] {
+  background-color: var(--color-white);
+  border-width: 2px;
+  font-weight: bold;
+}
+
+#screen-chat[data-font-size="large"] .speak-button {
+  font-size: 16px;
+}
+
 /* STEP17-B: 登録ボタン（未登録ユーザー向け） */
 .register-button {
   display: block;

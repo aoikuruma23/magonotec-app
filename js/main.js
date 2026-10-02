@@ -471,6 +471,9 @@ function clearChatHistory() {
   // STEP18: インストール案内フラグもリセット（再度案内が出るように）
   localStorage.removeItem(INSTALL_PROMPT_SHOWN_KEY);
 
+  // STEP24: 読み上げ中なら止める
+  stopSpeaking();
+
   // メッセージを初期化
   initializeMessages();
 
@@ -691,6 +694,9 @@ function setupVoiceInput() {
 function startVoiceRecognition() {
   if (!recognition || isRecording) return;
 
+  // STEP24: 読み上げの声をマイクが拾わないように止める
+  stopSpeaking();
+
   try {
     recognition.start();
     isRecording = true;
@@ -784,34 +790,48 @@ const MIN_INTERVAL_MINUTES = 180; // 3時間
 let AUTO_GREETING_ENABLED = true;
 
 /**
+ * STEP24: AI返信の自動読み上げが有効かどうか（設定から制御、既定OFF）
+ * @type {boolean}
+ */
+let AUTO_SPEAK_ENABLED = false;
+
+/**
  * 設定をlocalStorageから読み込む
- * @returns {{autoGreeting: string, mascotVisible: string, fontSize: string}}
+ * @returns {{autoGreeting: string, mascotVisible: string, fontSize: string, autoSpeak: string}}
  */
 function loadSettings() {
   return {
     autoGreeting: localStorage.getItem('magonotec_setting_autoGreeting') || 'on',
     mascotVisible: localStorage.getItem('magonotec_setting_mascotVisible') || 'on',
-    fontSize: localStorage.getItem('magonotec_setting_fontSize') || 'normal'
+    fontSize: localStorage.getItem('magonotec_setting_fontSize') || 'normal',
+    autoSpeak: localStorage.getItem('magonotec_setting_autoSpeak') || 'off'
   };
 }
 
 /**
  * 設定をlocalStorageに保存する
- * @param {{autoGreeting: string, mascotVisible: string, fontSize: string}} settings
+ * @param {{autoGreeting: string, mascotVisible: string, fontSize: string, autoSpeak: string}} settings
  */
 function saveSettings(settings) {
   localStorage.setItem('magonotec_setting_autoGreeting', settings.autoGreeting);
   localStorage.setItem('magonotec_setting_mascotVisible', settings.mascotVisible);
   localStorage.setItem('magonotec_setting_fontSize', settings.fontSize);
+  localStorage.setItem('magonotec_setting_autoSpeak', settings.autoSpeak);
 }
 
 /**
  * 設定を画面に適用する
- * @param {{autoGreeting: string, mascotVisible: string, fontSize: string}} settings
+ * @param {{autoGreeting: string, mascotVisible: string, fontSize: string, autoSpeak: string}} settings
  */
 function applySettings(settings) {
   // 1) オート挨拶の有効/無効
   AUTO_GREETING_ENABLED = (settings.autoGreeting === 'on');
+
+  // STEP24: 自動読み上げの有効/無効（OFFにしたら読み上げ中の音声も止める）
+  AUTO_SPEAK_ENABLED = (settings.autoSpeak === 'on');
+  if (!AUTO_SPEAK_ENABLED) {
+    stopSpeaking();
+  }
 
   // 2) マスコット表示
   const mascotContainer = document.querySelector('.mascot-watcher');
@@ -846,10 +866,12 @@ function setupSettingsUI(initial) {
   const autoGreetingRadio = document.querySelector(`input[name="autoGreeting"][value="${initial.autoGreeting}"]`);
   const mascotVisibleRadio = document.querySelector(`input[name="mascotVisible"][value="${initial.mascotVisible}"]`);
   const fontSizeRadio = document.querySelector(`input[name="fontSize"][value="${initial.fontSize}"]`);
+  const autoSpeakRadio = document.querySelector(`input[name="autoSpeak"][value="${initial.autoSpeak}"]`);
 
   if (autoGreetingRadio) autoGreetingRadio.checked = true;
   if (mascotVisibleRadio) mascotVisibleRadio.checked = true;
   if (fontSizeRadio) fontSizeRadio.checked = true;
+  if (autoSpeakRadio) autoSpeakRadio.checked = true;
 
   // モーダルを開く
   btnOpen.addEventListener('click', () => {
@@ -861,7 +883,8 @@ function setupSettingsUI(initial) {
     const settings = {
       autoGreeting: document.querySelector('input[name="autoGreeting"]:checked')?.value || 'on',
       mascotVisible: document.querySelector('input[name="mascotVisible"]:checked')?.value || 'on',
-      fontSize: document.querySelector('input[name="fontSize"]:checked')?.value || 'normal'
+      fontSize: document.querySelector('input[name="fontSize"]:checked')?.value || 'normal',
+      autoSpeak: document.querySelector('input[name="autoSpeak"]:checked')?.value || 'off'
     };
 
     saveSettings(settings);
@@ -1439,6 +1462,233 @@ function formatForSenior(text) {
 }
 
 // ============================================
+// STEP24: 読み上げ（Web Speech API / speechSynthesis）
+// ============================================
+
+/**
+ * 読み上げの速さ（1.0 が標準）
+ */
+const SPEECH_RATE = 0.9;
+
+/**
+ * いま読み上げ中のメッセージID（読み上げていなければ null）
+ * @type {string|null}
+ */
+let speakingMessageId = null;
+
+/**
+ * 読み上げ中の発話オブジェクト
+ * （参照を保持しないと、一部ブラウザで途中で読み上げが止まるため）
+ * @type {SpeechSynthesisUtterance[]}
+ */
+let activeUtterances = [];
+
+/**
+ * ユーザーが一度でも画面を操作したか
+ * iPhone/Safari ではユーザー操作前に音を出せないため、
+ * 自動読み上げはこのフラグが true になってからだけ行う
+ */
+let userHasInteracted = false;
+
+/**
+ * この端末で読み上げが使えるか
+ * @returns {boolean}
+ */
+function isSpeechSupported() {
+  return typeof window !== 'undefined' &&
+    'speechSynthesis' in window &&
+    typeof window.SpeechSynthesisUtterance === 'function';
+}
+
+/**
+ * 読み上げ用にテキストを整形する（画面表示のテキストは変更しない）
+ * - URL・絵文字・Markdown記号・装飾記号を除去
+ * - 「1. 」のような番号は「1、」にして自然に読ませる
+ * @param {string} text
+ * @returns {string}
+ */
+function toSpeechText(text) {
+  if (!text) return '';
+  return text
+    // Markdownリンク [文字](URL) → 文字
+    .replace(/\[([^\]]+)\]\((?:[^)]+)\)/g, '$1')
+    // URL
+    .replace(/https?:\/\/[^\s　）)」]+/g, '')
+    .replace(/www\.[^\s　）)」]+/g, '')
+    // 絵文字（異体字セレクタ・結合子・肌色・国旗・キーキャップ含む）
+    .replace(/[\p{Extended_Pictographic}\u{1F3FB}-\u{1F3FF}\u{1F1E6}-\u{1F1FF}︎️‍⃣]/gu, '')
+    // 行頭の Markdown 見出し・引用・箇条書き記号
+    .replace(/^[ \t　]*(?:#{1,6}|>|[-*•・])[ \t　]+/gm, '')
+    // 行頭の番号「1. 」「1) 」→「1、」
+    .replace(/^[ \t　]*(\d+)[.)．）][ \t　]*/gm, '$1、')
+    // 強調・コード記号
+    .replace(/(\*\*|__|~~|`+)/g, '')
+    // 音声では不要な装飾記号
+    .replace(/[*#_~|^<>{}\[\]★☆◆◇■□●○◎▼▲▽△♪♫♡♥※→←↑↓⇒⇔]/g, '')
+    // 余分な空白
+    .replace(/[ \t　]+/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+/**
+ * 日本語の音声を選ぶ（特定の音声名は固定しない）
+ * 端末の既定が英語音声のときに、日本語の音声へ寄せるため
+ * @returns {SpeechSynthesisVoice|null}
+ */
+function pickJapaneseVoice() {
+  try {
+    const voices = window.speechSynthesis.getVoices() || [];
+    const ja = voices.filter(v => /^ja([-_]|$)/i.test(v.lang));
+    return ja.find(v => v.default) || ja[0] || null;
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
+ * 読み上げボタンの表示を、いまの読み上げ状態に合わせる
+ */
+function updateSpeakButtons() {
+  document.querySelectorAll('.speak-button').forEach((btn) => {
+    const isSpeaking = btn.dataset.messageId === speakingMessageId;
+    btn.textContent = isSpeaking ? '⏹ とめる' : '🔊 よみあげる';
+    btn.setAttribute('aria-pressed', isSpeaking ? 'true' : 'false');
+  });
+}
+
+/**
+ * 読み上げを止める（読み上げていなければ何もしない）
+ */
+function stopSpeaking() {
+  activeUtterances = [];
+  speakingMessageId = null;
+  try {
+    if (isSpeechSupported()) {
+      window.speechSynthesis.cancel();
+    }
+  } catch (e) {
+    console.warn('読み上げの停止に失敗しました:', e);
+  }
+  updateSpeakButtons();
+}
+
+/**
+ * メッセージを読み上げる
+ * - 前の読み上げは必ず止めてから始める（重複再生しない）
+ * - 失敗してもチャット本体には影響させない
+ * @param {string} messageId
+ * @param {string} text - 画面に表示しているテキスト
+ */
+function speakMessage(messageId, text) {
+  if (!isSpeechSupported()) return;
+
+  stopSpeaking();
+
+  const speechText = toSpeechText(text);
+  if (!speechText) return;
+
+  try {
+    const synth = window.speechSynthesis;
+    const voice = pickJapaneseVoice();
+
+    // 文のまとまり（空行区切り）ごとに分けて読む
+    // （長文を1回で読ませると途中で止まるブラウザがあるため）
+    const chunks = speechText.split(/\n+/).map(s => s.trim()).filter(Boolean);
+    const utterances = chunks.map((chunk) => {
+      const u = new SpeechSynthesisUtterance(chunk);
+      u.lang = 'ja-JP';
+      u.rate = SPEECH_RATE;
+      if (voice) u.voice = voice;
+      return u;
+    });
+
+    const finish = (u) => {
+      // 別の読み上げに切り替わっていたら何もしない
+      if (activeUtterances.length === 0 || activeUtterances[activeUtterances.length - 1] !== u) return;
+      activeUtterances = [];
+      speakingMessageId = null;
+      updateSpeakButtons();
+    };
+    const last = utterances[utterances.length - 1];
+    last.onend = () => finish(last);
+    utterances.forEach((u) => {
+      u.onerror = (event) => {
+        // cancel() による中断はエラー扱いしない
+        if (event.error !== 'interrupted' && event.error !== 'canceled') {
+          console.warn('読み上げエラー:', event.error);
+        }
+        finish(last);
+      };
+    });
+
+    activeUtterances = utterances;
+    speakingMessageId = messageId;
+    updateSpeakButtons();
+
+    // 一時停止状態で固まっている端末への対策
+    if (synth.paused) synth.resume();
+    utterances.forEach(u => synth.speak(u));
+  } catch (e) {
+    console.warn('読み上げを開始できませんでした:', e);
+    activeUtterances = [];
+    speakingMessageId = null;
+    updateSpeakButtons();
+  }
+}
+
+/**
+ * 設定がONで、ユーザー操作のあとなら自動で読み上げる
+ * @param {{id: string, text: string}} msg
+ */
+function maybeAutoSpeak(msg) {
+  if (!AUTO_SPEAK_ENABLED || !userHasInteracted || !msg) return;
+  // 読み上げは「チャット画面を見ているとき」だけ
+  const chatScreen = document.getElementById('screen-chat');
+  if (!chatScreen || chatScreen.classList.contains('screen--hidden')) return;
+  speakMessage(msg.id, msg.text);
+}
+
+/**
+ * 読み上げ機能の初期化
+ * - 最初の画面操作で「操作済み」とし、iPhone 向けに音声を有効化しておく
+ * - 画面を閉じる/裏に回したときは読み上げを止める
+ */
+function setupSpeech() {
+  if (!isSpeechSupported()) {
+    console.log('この端末では読み上げ（speechSynthesis）が使えません');
+    return;
+  }
+
+  // 音声リストは非同期で読み込まれる端末があるので、先に要求しておく
+  try { window.speechSynthesis.getVoices(); } catch (e) { /* noop */ }
+
+  const markInteracted = () => {
+    if (userHasInteracted) return;
+    userHasInteracted = true;
+    // iPhone/Safari: ユーザー操作の中で一度だけ無音の発話を行い、
+    // 以降の（非同期の）自動読み上げを鳴らせるようにする
+    try {
+      const unlock = new SpeechSynthesisUtterance('');
+      unlock.volume = 0;
+      window.speechSynthesis.speak(unlock);
+    } catch (e) { /* noop */ }
+    ['pointerdown', 'touchend', 'keydown'].forEach((type) => {
+      document.removeEventListener(type, markInteracted, true);
+    });
+  };
+  ['pointerdown', 'touchend', 'keydown'].forEach((type) => {
+    document.addEventListener(type, markInteracted, true);
+  });
+
+  // ページを閉じる・アプリを裏に回すときは止める
+  window.addEventListener('pagehide', stopSpeaking);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') stopSpeaking();
+  });
+}
+
+// ============================================
 // ローディング表示
 // ============================================
 
@@ -1558,6 +1808,26 @@ function createMessageBubble(msg) {
     bubble.appendChild(p);
   }
 
+  // STEP24: AI回答の下に「よみあげる」ボタン（読み上げ非対応の端末では出さない）
+  if (msg.role === 'ai' && msg.text && isSpeechSupported()) {
+    const speakButton = document.createElement('button');
+    speakButton.type = 'button';
+    speakButton.className = 'speak-button';
+    speakButton.dataset.messageId = msg.id;
+    const isSpeaking = msg.id === speakingMessageId;
+    speakButton.textContent = isSpeaking ? '⏹ とめる' : '🔊 よみあげる';
+    speakButton.setAttribute('aria-pressed', isSpeaking ? 'true' : 'false');
+    speakButton.addEventListener('click', () => {
+      // 読み上げ中にもう一度押したら止める（連打しても重複再生しない）
+      if (speakingMessageId === msg.id) {
+        stopSpeaking();
+      } else {
+        speakMessage(msg.id, msg.text);
+      }
+    });
+    bubble.appendChild(speakButton);
+  }
+
   // STEP18: インストール案内の場合はボタンを追加
   if (msg.isInstallPrompt) {
     const button = document.createElement('button');
@@ -1647,6 +1917,9 @@ function handleUserMessage(text) {
 
   // 対話開始フラグを立てる（相談開始カードを非表示に）
   chatInteractionStarted = true;
+
+  // STEP24: 新しく送信したら、前の回答の読み上げは止める
+  stopSpeaking();
 
   // STEP17-B: ペアリングチェック（未登録なら送信ブロック）
   if (!hasValidPairing()) {
@@ -1840,6 +2113,9 @@ async function scheduleAiReply(userText, image = null) {
     // 描画を更新
     renderMessages();
 
+    // STEP24: 自動読み上げ（設定ON かつ ユーザー操作後のみ）
+    maybeAutoSpeak(aiMessage);
+
     // キャラを「安心」状態に（返信完了）
     setMascotState('relieved');
 
@@ -1948,6 +2224,9 @@ function clearInput() {
  * @param {string} screenId - 表示する画面のID（'screen-home' or 'screen-chat'）
  */
 function showScreen(screenId) {
+  // STEP24: 画面を切り替えるときは読み上げを止める
+  stopSpeaking();
+
   // STEP12: チャット画面を離れる場合はオート挨拶をクリーンアップ
   const currentChatScreen = document.getElementById('screen-chat');
   if (currentChatScreen && !currentChatScreen.classList.contains('screen--hidden') && screenId !== 'screen-chat') {
@@ -2080,6 +2359,9 @@ function init() {
 
   // STEP16: 音声入力機能の初期化
   setupVoiceInput();
+
+  // STEP24: 読み上げ機能の初期化
+  setupSpeech();
 
   // STEP17: 新しい相談を始めるボタン（チャットヘルパー内のみ）
   const btnNewChat = document.getElementById('btn-new-chat');
