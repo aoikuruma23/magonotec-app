@@ -161,6 +161,92 @@ body {
   transform: scale(0.98);
 }
 
+/* STEP24: 元気タッチ */
+/* ホームの縦並びで、ボタンが押しつぶされないようにする */
+.genki-area,
+.home-main-button {
+  flex-shrink: 0;
+}
+
+/* 画面に収まるときは中央寄せ、はみ出すときは上端から表示してスクロールできるようにする
+   （justify-content: center のままだと上側が切れてスクロールでも見えなくなるため） */
+.home-main {
+  justify-content: flex-start;
+}
+
+.home-main > :first-child {
+  margin-top: auto;
+}
+
+.home-main > :last-child {
+  margin-bottom: auto;
+}
+
+/* 「げんきだよ」を表示するときは、キャラクターを少し小さくして画面に収める */
+.home-main:has(.genki-area:not([hidden])) .home-character-image {
+  max-height: 26vh;
+}
+
+.genki-area {
+  width: 100%;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.genki-area[hidden] {
+  display: none;
+}
+
+.genki-button {
+  width: 100%;
+  min-height: 72px;
+  font-size: 24px;
+  font-weight: bold;
+  font-family: inherit;
+  color: var(--color-text);
+  background-color: var(--color-white);
+  border: 3px solid var(--color-pink-dark);
+  border-radius: var(--radius-button);
+  box-shadow: 0 4px 12px rgba(255, 153, 153, 0.35);
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.1s;
+}
+
+.genki-button:hover {
+  background-color: var(--color-pink-light);
+}
+
+.genki-button:active {
+  transform: scale(0.98);
+}
+
+.genki-button:disabled {
+  cursor: default;
+  transform: none;
+}
+
+.genki-button.genki-button--done {
+  font-size: 18px;
+  color: var(--color-text-light);
+  background-color: var(--color-pink-light);
+  border-color: var(--color-pink);
+  box-shadow: none;
+}
+
+.genki-message {
+  font-size: 18px;
+  line-height: 1.6;
+  text-align: center;
+  margin: 0;
+}
+
+.genki-message:empty {
+  display: none;
+}
+
 /* サブリンク */
 .home-sublinks {
   display: flex;

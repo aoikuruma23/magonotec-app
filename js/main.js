@@ -2245,6 +2245,11 @@ function showScreen(screenId) {
     targetScreen.classList.remove('screen--hidden');
     console.log(`画面を切り替えました: ${screenId}`);
 
+    // STEP24: ホームに戻ったら「げんきだよ」の表示を今日の状態に合わせる
+    if (screenId === 'screen-home') {
+      updateGenkiButton();
+    }
+
     // チャット画面に切り替えた場合
     if (screenId === 'screen-chat') {
       // キャラを通常状態に
@@ -2363,6 +2368,9 @@ function init() {
   // STEP24: 読み上げ機能の初期化
   setupSpeech();
 
+  // STEP24: 元気タッチ（「げんきだよ」ボタン）の初期化
+  setupGenki();
+
   // STEP17: 新しい相談を始めるボタン（チャットヘルパー内のみ）
   const btnNewChat = document.getElementById('btn-new-chat');
   if (btnNewChat) {
@@ -2464,6 +2472,118 @@ function setupGuideNavigation() {
       showScreen('screen-home');
     });
   }
+}
+
+// ============================================
+// STEP24: 元気タッチ（「げんきだよ」ボタン）
+// ============================================
+
+/**
+ * 最後に「げんきだよ」を伝えた日（JST, YYYY-MM-DD）
+ */
+const STORAGE_KEY_GENKI_DATE = 'magonotec_genki_date';
+
+/**
+ * 今日の日付（JST, YYYY-MM-DD）
+ * @returns {string}
+ */
+function getJstDateString() {
+  // sv-SE ロケールは YYYY-MM-DD 形式になる
+  return new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Tokyo' }).format(new Date());
+}
+
+/**
+ * ボタンの表示を、今日すでに伝えたかどうかに合わせる
+ */
+function updateGenkiButton() {
+  const area = document.getElementById('genki-area');
+  const button = document.getElementById('btn-genki');
+  if (!area || !button) return;
+
+  // 未登録の場合はボタンを出さない
+  if (!hasValidPairing()) {
+    area.hidden = true;
+    return;
+  }
+  area.hidden = false;
+
+  const done = localStorage.getItem(STORAGE_KEY_GENKI_DATE) === getJstDateString();
+  button.disabled = done;
+  button.classList.toggle('genki-button--done', done);
+  button.textContent = done ? '今日はもう伝えたよ ✓' : 'げんきだよ';
+}
+
+/**
+ * 「げんきだよ」を送る
+ */
+async function sendGenkiCheckin() {
+  const button = document.getElementById('btn-genki');
+  const message = document.getElementById('genki-message');
+  const pairingId = getPairingId();
+  if (!button || !pairingId) return;
+
+  button.disabled = true;
+  button.textContent = '伝えています…';
+  if (message) message.textContent = '';
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/genki/checkin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pairing_id: pairingId }),
+      signal: controller.signal,
+    });
+
+    if (response.status === 400 || response.status === 403) {
+      throw new Error('UNREGISTERED');
+    }
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    // サーバーの JST 日付で保存（端末の時計がずれていても当日扱いを合わせる）
+    localStorage.setItem(STORAGE_KEY_GENKI_DATE, data.date || getJstDateString());
+    updateGenkiButton();
+    if (message) {
+      message.innerHTML = 'よかった！<br>今日も会えてうれしいよ😊';
+    }
+  } catch (error) {
+    console.error('genki checkin error:', error);
+    updateGenkiButton();
+    if (message) {
+      message.innerHTML = error.message === 'UNREGISTERED'
+        ? 'ご家族の登録が確認できなかったよ。<br>わからなければ、ご家族に聞いてみてね。'
+        : 'うまく伝えられなかったよ。<br>少ししてから、もう一度押してみてね。';
+    }
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+/**
+ * 元気タッチの初期化
+ */
+function setupGenki() {
+  const button = document.getElementById('btn-genki');
+  if (!button) return;
+
+  button.addEventListener('click', sendGenkiCheckin);
+  updateGenkiButton();
+
+  // 日付が変わったあとにアプリへ戻ってきたとき、ボタンを押せる状態に戻す
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      const message = document.getElementById('genki-message');
+      if (message && localStorage.getItem(STORAGE_KEY_GENKI_DATE) !== getJstDateString()) {
+        message.textContent = '';
+      }
+      updateGenkiButton();
+    }
+  });
 }
 
 // DOMContentLoaded イベントで初期化
