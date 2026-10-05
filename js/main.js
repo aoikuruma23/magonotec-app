@@ -873,10 +873,16 @@ function setupSettingsUI(initial) {
   if (fontSizeRadio) fontSizeRadio.checked = true;
   if (autoSpeakRadio) autoSpeakRadio.checked = true;
 
-  // モーダルを開く
-  btnOpen.addEventListener('click', () => {
+  // モーダルを開く（チャット画面とホーム画面の歯車ボタン）
+  const openModal = () => {
+    updatePushSettings();
     modal.setAttribute('aria-hidden', 'false');
-  });
+  };
+  btnOpen.addEventListener('click', openModal);
+  const btnOpenHome = document.getElementById('btn-open-settings-home');
+  if (btnOpenHome) {
+    btnOpenHome.addEventListener('click', openModal);
+  }
 
   // モーダルを閉じる（設定を保存して適用）
   const closeModal = () => {
@@ -2371,6 +2377,9 @@ function init() {
   // STEP24: 元気タッチ（「げんきだよ」ボタン）の初期化
   setupGenki();
 
+  // STEP25: 朝8時 Push通知の初期化
+  setupPush();
+
   // STEP17: 新しい相談を始めるボタン（チャットヘルパー内のみ）
   const btnNewChat = document.getElementById('btn-new-chat');
   if (btnNewChat) {
@@ -2584,6 +2593,178 @@ function setupGenki() {
       updateGenkiButton();
     }
   });
+}
+
+// ==============================================
+// STEP25: 朝8時 Push通知
+// ==============================================
+
+/**
+ * Service Worker（index.html と同じ場所。GitHub Pages では /magonotec-app/sw.js、scope は /magonotec-app/）
+ */
+const SERVICE_WORKER_URL = 'sw.js';
+
+/**
+ * この端末で「朝のお知らせ」を設定したか（'on' のとき設定済み）
+ */
+const STORAGE_KEY_PUSH_ENABLED = 'magonotec_push_enabled';
+
+/**
+ * この端末・ブラウザで Push 通知が使えるか
+ * （iPhone はホーム画面に追加したアプリでだけ使える。Safari のタブでは PushManager が無い）
+ * @returns {boolean}
+ */
+function isPushSupported() {
+  return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+}
+
+/**
+ * VAPID 公開鍵（base64url）を PushManager.subscribe 用の Uint8Array にする
+ * @param {string} base64String
+ * @returns {Uint8Array}
+ */
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(base64);
+  return Uint8Array.from(raw, (c) => c.charCodeAt(0));
+}
+
+/**
+ * 設定画面の「朝のお知らせ」の表示を、今の状態に合わせる
+ */
+function updatePushSettings() {
+  const area = document.getElementById('push-settings');
+  const button = document.getElementById('btn-push-enable');
+  const message = document.getElementById('push-message');
+  if (!area || !button || !message) return;
+
+  // 未登録の場合は出さない
+  if (!hasValidPairing()) {
+    area.hidden = true;
+    return;
+  }
+  area.hidden = false;
+  button.disabled = false;
+  button.textContent = '通知を受け取る';
+  message.textContent = '';
+
+  if (!isPushSupported()) {
+    button.disabled = true;
+    message.innerHTML = isIOS() && !isPwaInstalled()
+      ? 'iPhoneでは「ホーム画面に追加」してから、<br>ホーム画面のまごのTECで設定してね。'
+      : 'このスマホでは、朝のお知らせを使えないみたい。';
+    return;
+  }
+
+  if (Notification.permission === 'denied') {
+    button.disabled = true;
+    message.innerHTML = '通知がオフになっているよ。<br>スマホの設定で、まごのTECの通知を許可してね。';
+    return;
+  }
+
+  if (Notification.permission === 'granted' && localStorage.getItem(STORAGE_KEY_PUSH_ENABLED) === 'on') {
+    button.textContent = '受け取る設定ずみ ✓';
+    message.textContent = '毎朝8時に「おはよう」が届くよ。';
+  }
+}
+
+/**
+ * 「通知を受け取る」を押したとき
+ * 1. 通知の許可を聞く（iPhone ではボタンを押した直後に聞かないと出ないため、最初に聞く）
+ * 2. Service Worker を登録
+ * 3. PushSubscription を作る
+ * 4. サーバーに保存
+ */
+async function enablePush() {
+  const button = document.getElementById('btn-push-enable');
+  const message = document.getElementById('push-message');
+  const pairingId = getPairingId();
+  if (!button || !message || !pairingId || !isPushSupported()) return;
+
+  button.disabled = true;
+  button.textContent = '設定しています…';
+  message.textContent = '';
+
+  try {
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+      localStorage.removeItem(STORAGE_KEY_PUSH_ENABLED);
+      updatePushSettings();
+      if (permission === 'default') {
+        message.innerHTML = '通知はまだオフのままだよ。<br>受け取りたくなったら、もう一度押してね。';
+      }
+      return;
+    }
+
+    const registration = await navigator.serviceWorker.register(SERVICE_WORKER_URL);
+    await navigator.serviceWorker.ready;
+
+    const keyResponse = await fetch(`${API_BASE_URL}/api/push/vapid-public-key`);
+    if (!keyResponse.ok) {
+      throw new Error(`vapid key error: ${keyResponse.status}`);
+    }
+    const { public_key: publicKey } = await keyResponse.json();
+
+    let subscription = await registration.pushManager.getSubscription();
+    if (!subscription) {
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey),
+      });
+    }
+
+    const json = subscription.toJSON();
+    const response = await fetch(`${API_BASE_URL}/api/push/subscribe`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        pairing_id: pairingId,
+        endpoint: json.endpoint,
+        p256dh: json.keys && json.keys.p256dh,
+        auth: json.keys && json.keys.auth,
+      }),
+    });
+    if (response.status === 400 || response.status === 403) {
+      throw new Error('UNREGISTERED');
+    }
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
+    }
+
+    localStorage.setItem(STORAGE_KEY_PUSH_ENABLED, 'on');
+    updatePushSettings();
+    message.innerHTML = 'できたよ！<br>毎朝8時に「おはよう」が届くよ。';
+  } catch (error) {
+    console.error('push subscribe error:', error);
+    updatePushSettings();
+    message.innerHTML = error.message === 'UNREGISTERED'
+      ? 'ご家族の登録が確認できなかったよ。<br>わからなければ、ご家族に聞いてみてね。'
+      : 'うまく設定できなかったよ。<br>少ししてから、もう一度押してみてね。';
+  }
+}
+
+/**
+ * 朝8時 Push通知の初期化
+ * ※ ページを開いただけでは通知の許可を聞かない（ボタンを押したときだけ）
+ */
+function setupPush() {
+  const button = document.getElementById('btn-push-enable');
+  if (button) {
+    button.addEventListener('click', enablePush);
+  }
+  updatePushSettings();
+
+  // 通知を押してアプリに戻ってきたら、ホームを出す（sw.js の notificationclick から届く）
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('message', (event) => {
+      if (event.data && event.data.type === 'open-home') {
+        const modal = document.getElementById('settings-modal');
+        if (modal) modal.setAttribute('aria-hidden', 'true');
+        showScreen('screen-home');
+      }
+    });
+  }
 }
 
 // DOMContentLoaded イベントで初期化

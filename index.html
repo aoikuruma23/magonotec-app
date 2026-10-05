@@ -31,7 +31,7 @@
         <span class="logo-text">まごのTEC</span>
       </div>
       <div class="header-right">
-        <button class="settings-button" aria-label="設定">
+        <button id="btn-open-settings-home" class="settings-button" aria-label="設定">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="3"></circle>
             <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"></path>
@@ -415,6 +415,13 @@
             <span>OFF</span>
           </label>
         </div>
+      </div>
+
+      <!-- STEP25: 朝8時 Push通知（登録済みの場合のみJSで表示） -->
+      <div class="settings-group" id="push-settings" hidden>
+        <div class="settings-label">朝のお知らせ（毎朝8時）</div>
+        <button id="btn-push-enable" class="push-enable-button" type="button">通知を受け取る</button>
+        <p id="push-message" class="push-message" aria-live="polite"></p>
       </div>
 
       <div class="settings-actions">
