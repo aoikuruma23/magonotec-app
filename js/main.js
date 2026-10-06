@@ -1814,6 +1814,24 @@ function createMessageBubble(msg) {
     bubble.appendChild(p);
   }
 
+  // STEP26: ネットで調べた出典「出典：〇〇」（名前を押すと、そのページが別の画面で開く）
+  const sources = sanitizeSources(msg.sources);
+  if (msg.role === 'ai' && sources.length > 0) {
+    const sourcesEl = document.createElement('p');
+    sourcesEl.className = 'message-sources';
+    sourcesEl.appendChild(document.createTextNode('出典：'));
+    sources.forEach((source, i) => {
+      if (i > 0) sourcesEl.appendChild(document.createTextNode('、'));
+      const link = document.createElement('a');
+      link.href = source.url;
+      link.textContent = source.name;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      sourcesEl.appendChild(link);
+    });
+    bubble.appendChild(sourcesEl);
+  }
+
   // STEP24: AI回答の下に「よみあげる」ボタン（読み上げ非対応の端末では出さない）
   if (msg.role === 'ai' && msg.text && isSpeechSupported()) {
     const speakButton = document.createElement('button');
@@ -1893,6 +1911,21 @@ function retryLastRequest() {
 
   // 再度APIを呼び出す
   scheduleAiReply(lastRequestText, lastRequestImage);
+}
+
+/**
+ * STEP26: サーバーから届いた出典を、表示してよい形だけに絞る
+ * （http/https のリンクだけ。名前が無いものは出さない。最大3件）
+ * @param {any} sources
+ * @returns {{name: string, url: string}[]}
+ */
+function sanitizeSources(sources) {
+  if (!Array.isArray(sources)) return [];
+  return sources
+    .filter((s) => s && typeof s.name === 'string' && typeof s.url === 'string' && s.name.trim())
+    .filter((s) => /^https?:\/\//i.test(s.url))
+    .slice(0, 3)
+    .map((s) => ({ name: s.name.trim(), url: s.url }));
 }
 
 /**
@@ -2103,6 +2136,11 @@ async function scheduleAiReply(userText, image = null) {
       text: formattedReply,
       timestamp: getCurrentTimestamp()
     };
+    // STEP26: ネットで調べた出典（本文とは別に持つ。読み上げ・AIへの履歴には入れない）
+    const sources = sanitizeSources(data.sources);
+    if (sources.length > 0) {
+      aiMessage.sources = sources;
+    }
     messages.push(aiMessage);
 
     // STEP17: 会話履歴を保存

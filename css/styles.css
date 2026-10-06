@@ -545,6 +545,24 @@ body {
   transform: translateY(1px);
 }
 
+/* STEP26: 出典（AI回答の下。小さめ。名前の部分を押すとページが開く） */
+.message-bubble p.message-sources {
+  margin-top: 10px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--color-text-light);
+}
+
+.message-sources a {
+  display: inline-block;
+  padding: 4px 2px;
+  color: var(--color-pink-dark);
+  font-weight: bold;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  word-break: break-all;
+}
+
 /* STEP24: 読み上げボタン（AI回答の下。押しやすいが本文より目立たせない） */
 .speak-button {
   display: inline-flex;
