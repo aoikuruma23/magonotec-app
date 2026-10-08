@@ -1467,6 +1467,57 @@ function formatForSenior(text) {
   return result.join('\n\n');
 }
 
+/**
+ * 「。」の改行で次の段落に落ちた太字の閉じ記号「**」を、前の文の後ろに戻す（表示用）
+ * 例：「**押さないでね。\n\n**\n\n次の文」→「**押さないでね。**\n\n次の文」
+ *     「**押さないでね。\n\n**次の文」  →「**押さないでね。**\n\n次の文」
+ * 戻すのは、前の段落が「。」「？」「！」で終わり、その段落の「**」が閉じていない（奇数）ときだけ。
+ * 「**」だけになった段落は、前の空行ごと取り除く
+ * @param {string} text
+ * @returns {string}
+ */
+function joinOrphanEmphasis(text) {
+  const lines = text.split('\n');
+  const countMarks = (s) => (s.match(/\*\*/g) || []).length;
+  let prev = -1;  // 1つ前の、中身のある行
+  for (let i = 0; i < lines.length; i++) {
+    const trimmed = lines[i].trim();
+    if (!trimmed) continue;
+    if (prev >= 0 && trimmed.startsWith('**') && countMarks(lines[prev]) % 2 === 1
+        && /[。？！][ \t　]*$/.test(lines[prev])) {
+      lines[prev] = lines[prev].replace(/[ \t　]+$/, '') + '**';
+      const rest = trimmed.slice(2).trim();
+      if (!rest) {
+        lines[i] = null;
+        // 「**」だけの段落の前の空行も取り除く（空行が2つ続かないように）
+        if (i > 0 && lines[i - 1] !== null && lines[i - 1].trim() === '') lines[i - 1] = null;
+        continue;
+      }
+      lines[i] = rest;
+    }
+    prev = i;
+  }
+  return lines.filter((l) => l !== null).join('\n');
+}
+
+/**
+ * AI回答の本文を、表示用のHTMLにする（保存している msg.text は変えない）
+ * 1. 切り離された閉じ「**」を前の文へ戻す
+ * 2. 全文を escapeHtml で文字として扱う（AIが返したHTMLは動かさない）
+ * 3. 同じ行の中で対になった「**文章**」だけを <strong> にする
+ * 4. 対にならず残った「**」は消す
+ * 5. 改行を <br> にする
+ * 新しく作るタグは <strong> と <br> だけ
+ * @param {string} text
+ * @returns {string}
+ */
+function renderAiTextHtml(text) {
+  let html = escapeHtml(joinOrphanEmphasis(text));
+  html = html.replace(/\*\*(?=\S)([^\n]*?\S)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/\*\*/g, '');
+  return html.replace(/\n/g, '<br>');
+}
+
 // ============================================
 // STEP24: 読み上げ（Web Speech API / speechSynthesis）
 // ============================================
@@ -1810,7 +1861,10 @@ function createMessageBubble(msg) {
   // テキストを<p>タグで囲む（改行は<br>に変換）
   if (msg.text) {
     const p = document.createElement('p');
-    p.innerHTML = escapeHtml(msg.text).replace(/\n/g, '<br>');
+    // AI回答だけ太字「**…**」を表示に反映する（利用者が書いた吹き出しは今までどおり）
+    p.innerHTML = msg.role === 'ai'
+      ? renderAiTextHtml(msg.text)
+      : escapeHtml(msg.text).replace(/\n/g, '<br>');
     bubble.appendChild(p);
   }
 
