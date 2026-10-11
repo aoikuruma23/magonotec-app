@@ -10,8 +10,8 @@
 
   <link rel="stylesheet" href="css/styles.css">
   <link rel="stylesheet" href="css/legal.css">
-  <!-- QRコード生成ライブラリ -->
-  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+  <!-- QRコード生成ライブラリ（qrcode 1.5.3。外部CDNの build/ が無くなったため、アプリ内のファイルを使う） -->
+  <script src="assets/vendor/qrcode.min.js"></script>
   <style>
     /* 成功ページ専用: bodyのoverflow:hiddenを解除 */
     html, body {
@@ -124,19 +124,27 @@
       font-size: 17px;
       font-weight: bold;
       color: var(--color-white);
-      background: var(--color-primary);
+      /* --color-primary は未定義で透明になり、白い文字が見えなかった。
+         このページの既存ボタン（retry-button / アプリの登録ボタン）と同じオレンジ系で、白文字とのコントラストが 4.5:1 以上になる濃さにする */
+      background: #C94F00;  /* 白文字とのコントラスト 4.56:1（WCAG AA 4.5:1 以上） */
       border: none;
       border-radius: 12px;
       cursor: pointer;
+      box-shadow: 0 3px 8px rgba(230, 126, 34, 0.4);
       transition: all 0.2s;
     }
 
-    .copy-button:hover {
-      opacity: 0.9;
+    .copy-button:active {
+      transform: translateY(1px);
+    }
+
+    .copy-button:focus-visible {
+      outline: 3px solid #E67E22;
+      outline-offset: 2px;
     }
 
     .copy-button--copied {
-      background: #059669;
+      background: #047857;  /* 白文字とのコントラスト 5.48:1 */
     }
 
     .qr-section {
