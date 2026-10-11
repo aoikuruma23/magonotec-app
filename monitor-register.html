@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>まごのTEC - モニター登録</title>
+
+  <!-- STEP27: 招待URLを受け取った人だけが開くページ（どこからもリンクしない・検索に出さない） -->
+  <meta name="robots" content="noindex">
+  <meta name="referrer" content="no-referrer">
+  <meta name="theme-color" content="#E8A0A0">
+
+  <script>
+    // 招待トークンは URL の # の後ろ（サーバーには送られない）。読んだらすぐ URL から消す
+    const INVITE_TOKEN = (function () {
+      const hash = window.location.hash || '';
+      const params = new URLSearchParams(hash.replace(/^#/, ''));
+      const token = params.get('t');
+      if (hash) {
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+      return token && token.trim() ? token.trim() : null;
+    })();
+  </script>
+
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/legal.css">
+  <!-- QRコード生成ライブラリ（register_success.html と同じ） -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+  <style>
+    /* bodyのoverflow:hiddenを解除 */
+    html, body {
+      overflow: auto !important;
+      height: auto !important;
+    }
+
+    .monitor-screen {
+      min-height: 100vh;
+      background: var(--color-bg);
+      padding: 0;
+    }
+
+    .monitor-header {
+      background: var(--color-white);
+      padding: 16px 20px;
+      text-align: center;
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .monitor-header__logo {
+      font-size: 22px;
+      font-weight: bold;
+      color: var(--color-primary);
+    }
+
+    .monitor-container {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 24px 20px;
+    }
+
+    .monitor-title {
+      font-size: 24px;
+      font-weight: bold;
+      color: var(--color-text);
+      text-align: center;
+      margin-bottom: 12px;
+    }
+
+    .monitor-subtitle {
+      font-size: 16px;
+      color: var(--color-text-secondary);
+      text-align: center;
+      margin-bottom: 24px;
+      line-height: 1.6;
+      word-break: keep-all;
+      overflow-wrap: break-word;
+    }
+
+    .monitor-note {
+      background: var(--color-white);
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-bottom: 20px;
+      font-size: 14px;
+      color: var(--color-text);
+      line-height: 1.7;
+    }
+
+    .monitor-form,
+    .monitor-card {
+      background: var(--color-white);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      margin-bottom: 24px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 15px;
+      font-weight: bold;
+      color: var(--color-text);
+      margin-bottom: 8px;
+    }
+
+    .form-label--required::after {
+      content: " *";
+      color: var(--color-primary);
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 14px 16px;
+      font-size: 17px;
+      border: 2px solid var(--color-border);
+      border-radius: 10px;
+      background: var(--color-white);
+      color: var(--color-text);
+      box-sizing: border-box;
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: var(--color-primary);
+    }
+
+    .form-hint {
+      font-size: 13px;
+      color: var(--color-text-secondary);
+      margin-top: 6px;
+      line-height: 1.5;
+    }
+
+    .form-checkbox-group {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 16px;
+      background: var(--color-bg);
+      border-radius: 10px;
+      margin-bottom: 20px;
+    }
+
+    .form-checkbox {
+      width: 24px;
+      height: 24px;
+      margin-top: 2px;
+      flex-shrink: 0;
+    }
+
+    .form-checkbox-label {
+      font-size: 14px;
+      color: var(--color-text);
+      line-height: 1.6;
+    }
+
+    .monitor-submit {
+      display: block;
+      width: 100%;
+      padding: 20px;
+      font-size: 18px;
+      font-weight: bold;
+      color: #ffffff;
+      background: #E8A0A0;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+    }
+
+    .monitor-submit:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      background: #cccccc;
+    }
+
+    .monitor-error {
+      background: #FEE2E2;
+      color: #DC2626;
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .monitor-card__title {
+      font-size: 18px;
+      font-weight: bold;
+      color: var(--color-text);
+      margin-bottom: 16px;
+      text-align: center;
+    }
+
+    .monitor-card__description {
+      font-size: 14px;
+      color: var(--color-text-secondary);
+      text-align: center;
+      margin-bottom: 20px;
+      line-height: 1.6;
+    }
+
+    .url-box {
+      background: var(--color-bg);
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 16px;
+      word-break: break-all;
+      font-size: 14px;
+      color: var(--color-text);
+      line-height: 1.5;
+    }
+
+    .copy-button {
+      width: 100%;
+      padding: 16px 24px;
+      font-size: 17px;
+      font-weight: bold;
+      color: var(--color-white);
+      background: var(--color-primary);
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+    }
+
+    .copy-button--copied {
+      background: #059669;
+    }
+
+    .qr-section {
+      text-align: center;
+      margin-top: 24px;
+      padding-top: 24px;
+      border-top: 1px solid var(--color-border);
+    }
+
+    .qr-section__title {
+      font-size: 15px;
+      color: var(--color-text-secondary);
+      margin-bottom: 16px;
+    }
+
+    .qr-code {
+      display: inline-block;
+      padding: 16px;
+      background: var(--color-white);
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .qr-code canvas {
+      display: block;
+    }
+
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="monitor-screen">
+    <header class="monitor-header">
+      <div class="monitor-header__logo">まごのTEC</div>
+    </header>
+
+    <main class="monitor-container">
+      <!-- 招待URLから開いていない -->
+      <div id="no-token-state" class="hidden">
+        <h1 class="monitor-title">モニター登録</h1>
+        <div class="monitor-error">
+          このページは、ご案内した招待URLから開いてください。<br>
+          わからないときは、ご案内した担当者にご連絡ください。
+        </div>
+      </div>
+
+      <!-- 入力 -->
+      <div id="form-state" class="hidden">
+        <h1 class="monitor-title">モニター登録</h1>
+        <p class="monitor-subtitle">
+          大田区モニターの方専用の登録ページです。
+        </p>
+        <div class="monitor-note">
+          カードの登録はいりません。モニター期間中、料金はかかりません。<br>
+          この招待URLで登録できるのは1回だけです。
+        </div>
+
+        <div id="error-message" class="monitor-error hidden"></div>
+
+        <form id="monitor-form" class="monitor-form">
+          <div class="form-group">
+            <label class="form-label form-label--required" for="family-email">
+              ご家族のメールアドレス
+            </label>
+            <input
+              type="email"
+              id="family-email"
+              class="form-input"
+              placeholder="example@mail.com"
+              autocomplete="email"
+              required
+            >
+            <p class="form-hint">
+              利用を始めるためのURLと、利用日数のお知らせ（週1回）をお届けします（会話内容は記録しません）。
+            </p>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="senior-name">
+              利用者のニックネーム
+            </label>
+            <input
+              type="text"
+              id="senior-name"
+              class="form-input"
+              placeholder="お父さん、おばあちゃん など"
+              maxlength="20"
+            >
+            <p class="form-hint">
+              省略OK。アプリの中で、まごちゃんがこの呼び名で話しかけます（サーバーには保存しません）。
+            </p>
+          </div>
+
+          <div class="form-checkbox-group">
+            <input type="checkbox" id="agree-terms" class="form-checkbox" required>
+            <label for="agree-terms" class="form-checkbox-label">
+              会話内容は記録しません。共有は「週に何日使ったか」のみ。<br>
+              個人情報は入力しないでください。<br>
+              <a href="terms.html" target="_blank" rel="noopener" style="color:#FF9999;">利用規約</a>
+              ・
+              <a href="privacy.html" target="_blank" rel="noopener" style="color:#FF9999;">プライバシーポリシー</a>
+              に同意します。
+            </label>
+          </div>
+
+          <button type="submit" id="submit-button" class="monitor-submit" disabled>
+            登録する
+          </button>
+        </form>
+      </div>
+
+      <!-- 登録完了 -->
+      <div id="success-state" class="hidden">
+        <h1 class="monitor-title">登録が完了しました</h1>
+        <p class="monitor-subtitle">
+          下のリンクを、使う方のスマホで開いてください。<br>
+          同じリンクを、ご家族のメールにもお送りしました。
+        </p>
+
+        <div class="monitor-card">
+          <h2 class="monitor-card__title">使う方のリンク</h2>
+          <p class="monitor-card__description">
+            このリンクをスマホで開くと、<br>
+            すぐにチャットを始められます。
+          </p>
+
+          <div class="url-box" id="pairing-url"></div>
+
+          <button class="copy-button" id="copy-button" type="button">
+            リンクをコピーする
+          </button>
+
+          <div class="qr-section">
+            <p class="qr-section__title">QRコードでも開けます</p>
+            <div class="qr-code" id="qr-code"></div>
+          </div>
+        </div>
+      </div>
+
+      <footer class="site-footer">
+        <nav class="site-footer__nav">
+          <a href="terms.html">利用規約</a>
+          <a href="privacy.html">プライバシーポリシー</a>
+          <a href="tokutei.html">特定商取引法に基づく表記</a>
+          <a href="security.html">セキュリティ</a>
+        </nav>
+        <div>© 2026 だはんで</div>
+      </footer>
+    </main>
+  </div>
+
+  <script>
+    // ==============================================
+    // STEP27: モニター登録ページ JavaScript
+    // ==============================================
+
+    const API_BASE_URL = 'https://magonotec-api.onrender.com';
+    const APP_BASE_URL = 'https://aoikuruma23.github.io/magonotec-app';
+
+    let inviteToken = INVITE_TOKEN;
+    let pairingUrl = '';
+    let submitting = false;
+
+    const noTokenState = document.getElementById('no-token-state');
+    const formState = document.getElementById('form-state');
+    const successState = document.getElementById('success-state');
+    const form = document.getElementById('monitor-form');
+    const familyEmailInput = document.getElementById('family-email');
+    const seniorNameInput = document.getElementById('senior-name');
+    const agreeCheckbox = document.getElementById('agree-terms');
+    const submitButton = document.getElementById('submit-button');
+    const errorMessage = document.getElementById('error-message');
+    const pairingUrlBox = document.getElementById('pairing-url');
+    const qrCodeContainer = document.getElementById('qr-code');
+    const copyButton = document.getElementById('copy-button');
+
+    function showState(el) {
+      [noTokenState, formState, successState].forEach((s) => s.classList.add('hidden'));
+      el.classList.remove('hidden');
+    }
+
+    function validateForm() {
+      const emailValid = familyEmailInput.validity.valid && familyEmailInput.value.trim() !== '';
+      submitButton.disabled = submitting || !(emailValid && agreeCheckbox.checked);
+    }
+
+    function showError(message) {
+      errorMessage.textContent = message;
+      errorMessage.classList.remove('hidden');
+    }
+
+    function hideError() {
+      errorMessage.classList.add('hidden');
+    }
+
+    function setCopied() {
+      copyButton.textContent = 'コピーしました！';
+      copyButton.classList.add('copy-button--copied');
+      setTimeout(() => {
+        copyButton.textContent = 'リンクをコピーする';
+        copyButton.classList.remove('copy-button--copied');
+      }, 2000);
+    }
+
+    function copyUrl() {
+      navigator.clipboard.writeText(pairingUrl).then(setCopied).catch(() => {
+        const textArea = document.createElement('textarea');
+        textArea.value = pairingUrl;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        setCopied();
+      });
+    }
+
+    function generateQRCode(url) {
+      if (typeof QRCode === 'undefined') {
+        qrCodeContainer.innerHTML = '<p style="color: #999; font-size: 14px;">QRコードは上のリンクをコピーしてお使いください</p>';
+        return;
+      }
+      QRCode.toCanvas(url, { width: 180, margin: 2, color: { dark: '#000000', light: '#ffffff' } }, (error, canvas) => {
+        if (error) {
+          qrCodeContainer.innerHTML = '<p style="color: #999; font-size: 14px;">QRコードを生成できませんでした</p>';
+          return;
+        }
+        qrCodeContainer.innerHTML = '';
+        qrCodeContainer.appendChild(canvas);
+      });
+    }
+
+    async function handleSubmit(e) {
+      e.preventDefault();
+      if (submitting || !inviteToken) return;
+      hideError();
+
+      const familyEmail = familyEmailInput.value.trim();
+      const seniorName = seniorNameInput.value.trim();
+      // 規約に同意していなければ送らない（API 側でも terms_accepted: true 以外は受け付けない）
+      if (!familyEmail || !agreeCheckbox.checked) return;
+
+      // 二重送信しない（送信中はボタンを押せない）
+      submitting = true;
+      validateForm();
+      submitButton.textContent = '登録しています...';
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/monitor/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: inviteToken, family_email: familyEmail, terms_accepted: true }),
+        });
+
+        if (!response.ok) {
+          let detail = '登録できませんでした。しばらくしてからお試しください。';
+          if (response.status === 429) {
+            detail = '続けて送信されました。1分ほど待ってからお試しください。';
+          } else if (response.status === 422) {
+            detail = 'メールアドレスをご確認ください。';
+          } else {
+            try {
+              const data = await response.json();
+              if (typeof data.detail === 'string') detail = data.detail;
+            } catch (jsonError) { /* そのまま */ }
+          }
+          throw new Error(detail);
+        }
+
+        const data = await response.json();
+        inviteToken = null; // 使い終わったトークンは手元にも残さない
+
+        // 通常登録（register_success.html）と同じ形の URL
+        pairingUrl = `${APP_BASE_URL}/?pair=${data.pairing_id}`;
+        if (seniorName) {
+          pairingUrl += `&name=${encodeURIComponent(seniorName)}`;
+        }
+        pairingUrlBox.textContent = pairingUrl;
+        generateQRCode(pairingUrl);
+        showState(successState);
+
+      } catch (error) {
+        let message = error.message;
+        if (error.name === 'TypeError') {
+          message = 'サーバーに接続できませんでした。インターネット接続を確認してください。';
+        }
+        showError(message);
+        submitting = false;
+        submitButton.textContent = '登録する';
+        validateForm();
+      }
+    }
+
+    familyEmailInput.addEventListener('input', validateForm);
+    agreeCheckbox.addEventListener('change', validateForm);
+    form.addEventListener('submit', handleSubmit);
+    copyButton.addEventListener('click', copyUrl);
+
+    if (inviteToken) {
+      showState(formState);
+      validateForm();
+    } else {
+      showState(noTokenState);
+    }
+  </script>
+</body>
+</html>
