@@ -320,21 +320,6 @@
             </p>
           </div>
 
-          <div class="form-group">
-            <label class="form-label" for="senior-name">
-              利用者のニックネーム
-            </label>
-            <input
-              type="text"
-              id="senior-name"
-              class="form-input"
-              placeholder="お父さん、おばあちゃん など"
-              maxlength="20"
-            >
-            <p class="form-hint">
-              省略OK。アプリの中で、まごちゃんがこの呼び名で話しかけます（サーバーには保存しません）。
-            </p>
-          </div>
 
           <div class="form-checkbox-group">
             <input type="checkbox" id="agree-terms" class="form-checkbox" required>
@@ -411,7 +396,6 @@
     const successState = document.getElementById('success-state');
     const form = document.getElementById('monitor-form');
     const familyEmailInput = document.getElementById('family-email');
-    const seniorNameInput = document.getElementById('senior-name');
     const agreeCheckbox = document.getElementById('agree-terms');
     const submitButton = document.getElementById('submit-button');
     const errorMessage = document.getElementById('error-message');
@@ -480,7 +464,6 @@
       hideError();
 
       const familyEmail = familyEmailInput.value.trim();
-      const seniorName = seniorNameInput.value.trim();
       // 規約に同意していなければ送らない（API 側でも terms_accepted: true 以外は受け付けない）
       if (!familyEmail || !agreeCheckbox.checked) return;
 
@@ -515,10 +498,8 @@
         inviteToken = null; // 使い終わったトークンは手元にも残さない
 
         // 通常登録（register_success.html）と同じ形の URL
+        // 呼び名は URL に入れない（ご本人がアプリの設定で決める）
         pairingUrl = `${APP_BASE_URL}/?pair=${data.pairing_id}`;
-        if (seniorName) {
-          pairingUrl += `&name=${encodeURIComponent(seniorName)}`;
-        }
         pairingUrlBox.textContent = pairingUrl;
         generateQRCode(pairingUrl);
         showState(successState);

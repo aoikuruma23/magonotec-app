@@ -321,20 +321,6 @@
           </p>
         </div>
 
-        <div class="form-group">
-          <label class="form-label" for="senior-name">
-            利用者のニックネーム
-          </label>
-          <input
-            type="text"
-            id="senior-name"
-            class="form-input"
-            placeholder="お父さん、おばあちゃん など"
-          >
-          <p class="form-hint">
-            省略OK。週次メールの件名に「○○さんの利用日数」と表示されます。
-          </p>
-        </div>
 
         <div class="form-checkbox-group">
           <input type="checkbox" id="agree-terms" class="form-checkbox" required>
@@ -407,7 +393,6 @@
     // DOM要素
     const form = document.getElementById('register-form');
     const familyEmailInput = document.getElementById('family-email');
-    const seniorNameInput = document.getElementById('senior-name');
     const agreeCheckbox = document.getElementById('agree-terms');
     const submitButton = document.getElementById('submit-button');
     const errorMessage = document.getElementById('error-message');
@@ -458,7 +443,6 @@
       hideError();
 
       const familyEmail = familyEmailInput.value.trim();
-      const seniorName = seniorNameInput.value.trim();
 
       // バリデーション
       if (!familyEmail) {
@@ -484,7 +468,6 @@
           },
           body: JSON.stringify({
             family_email: familyEmail,
-            senior_name: seniorName || null,
             plan: 'monthly',
           }),
         });

@@ -1077,6 +1077,34 @@ body {
   accent-color: var(--color-pink-dark);
 }
 
+/* 呼んでほしい名前（ご本人が決める・端末の中だけ） */
+.settings-label[for] {
+  display: block;
+}
+
+.settings-text {
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 16px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.settings-text:focus {
+  outline: none;
+  border-color: var(--color-pink);
+}
+
+.settings-hint {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--color-text);
+  opacity: 0.75;
+}
+
 /* STEP25: 朝のお知らせ（Push通知） */
 .settings-group[hidden] {
   display: none;
@@ -1136,6 +1164,43 @@ body {
 
 .settings-close-button:hover {
   background: var(--color-pink);
+}
+
+/* 呼び名を最初に1回だけ聞く画面（ボタンは大きく、押すだけで済むように） */
+.name-ask__text {
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--color-text);
+  margin: 0 0 12px;
+}
+
+.name-ask .settings-text {
+  font-size: 18px;
+  padding: 12px;
+}
+
+.name-ask__ok,
+.name-ask__skip {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  font-size: 17px;
+  font-weight: bold;
+  border-radius: 24px;
+  padding: 14px 16px;
+  cursor: pointer;
+}
+
+.name-ask__ok {
+  color: var(--color-white);
+  background: var(--color-pink-dark);
+  border: none;
+}
+
+.name-ask__skip {
+  color: var(--color-text);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
 }
 
 /* ============================================

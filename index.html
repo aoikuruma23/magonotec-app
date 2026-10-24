@@ -362,6 +362,12 @@
       <h2 class="settings-modal__title">かんたん設定</h2>
 
       <div class="settings-group">
+        <label class="settings-label" for="setting-senior-name">まごちゃんに呼んでほしい名前</label>
+        <input type="text" id="setting-senior-name" class="settings-text" maxlength="10" placeholder="空欄なら名前は呼びません" autocomplete="off">
+        <p class="settings-hint">このスマホの中にだけ保存します。</p>
+      </div>
+
+      <div class="settings-group">
         <div class="settings-label">オート挨拶</div>
         <div class="settings-options">
           <label class="settings-radio">
@@ -427,6 +433,19 @@
       <div class="settings-actions">
         <button id="btn-settings-close" class="settings-close-button">とじる</button>
       </div>
+    </div>
+  </div>
+
+  <!-- 呼び名：最初に1回だけ聞く（ご本人が決める。端末の中にだけ保存） -->
+  <div class="settings-modal" id="name-ask-modal" aria-hidden="true">
+    <div class="settings-modal__backdrop"></div>
+    <div class="settings-modal__content name-ask">
+      <h2 class="settings-modal__title">はじめまして、まごちゃんです</h2>
+      <p class="name-ask__text">あなたのことを、なんとお呼びしたらいいですか？</p>
+      <input type="text" id="name-ask-input" class="settings-text" maxlength="10" placeholder="例：はなこさん" autocomplete="off">
+      <button id="btn-name-ask-ok" class="name-ask__ok" type="button">この名前で呼んでね</button>
+      <button id="btn-name-ask-skip" class="name-ask__skip" type="button">名前は呼ばないで</button>
+      <p class="settings-hint">あとから「かんたん設定」で変えられます。</p>
     </div>
   </div>
 

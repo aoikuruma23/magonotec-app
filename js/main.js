@@ -56,26 +56,19 @@ const STORAGE_KEY_SENIOR_NAME = 'magonotec_senior_name';
 
 /**
  * URLパラメータからpairing_idを取得し、localStorageに保存
- * STEP19: senior_nameも保存
+ * 呼び名は URL から受け取らない（ご本人がかんたん設定で決め、端末の中にだけ保存する）
  * @returns {string|null} pairing_id
  */
 function initPairing() {
   const urlParams = new URLSearchParams(window.location.search);
   const pairParam = urlParams.get('pair');
-  const nameParam = urlParams.get('name');
 
   if (pairParam) {
     // URLにpair=がある場合、localStorageに保存
     localStorage.setItem(STORAGE_KEY_PAIRING_ID, pairParam);
     console.log('ペアリングIDを保存しました:', pairParam);
 
-    // STEP19: ニックネームも保存
-    if (nameParam) {
-      localStorage.setItem(STORAGE_KEY_SENIOR_NAME, nameParam);
-      console.log('ニックネームを保存しました:', nameParam);
-    }
-
-    // URLからパラメータを削除（見た目をクリーンに）
+    // URLからパラメータを削除（見た目をクリーンに。古いURLの name= もここで消える）
     const cleanUrl = window.location.origin + window.location.pathname;
     window.history.replaceState({}, document.title, cleanUrl);
   }
@@ -873,8 +866,12 @@ function setupSettingsUI(initial) {
   if (fontSizeRadio) fontSizeRadio.checked = true;
   if (autoSpeakRadio) autoSpeakRadio.checked = true;
 
+  // 呼んでほしい名前（端末の中だけ）
+  const nameInput = document.getElementById('setting-senior-name');
+
   // モーダルを開く（チャット画面とホーム画面の歯車ボタン）
   const openModal = () => {
+    if (nameInput) nameInput.value = getSeniorName();
     updatePushSettings();
     modal.setAttribute('aria-hidden', 'false');
   };
@@ -895,6 +892,10 @@ function setupSettingsUI(initial) {
 
     saveSettings(settings);
     applySettings(settings);
+    if (nameInput) {
+      setSeniorName(nameInput.value);
+      localStorage.setItem(STORAGE_KEY_NAME_ASKED, '1');
+    }
     modal.setAttribute('aria-hidden', 'true');
   };
 
@@ -1120,6 +1121,47 @@ const STORAGE_KEY_ANNIV_USED_PREFIX = 'emotion_anniv_used_';
  */
 function getSeniorName() {
   return localStorage.getItem(STORAGE_KEY_SENIOR_NAME) || '';
+}
+
+/**
+ * 呼び名を保存する（ご本人が決める。端末の中にだけ保存し、サーバーには送らない）
+ * 空なら消す＝名前は呼ばない
+ * @param {string} name
+ */
+function setSeniorName(name) {
+  const trimmed = (name || '').trim().slice(0, 10);
+  if (trimmed) {
+    localStorage.setItem(STORAGE_KEY_SENIOR_NAME, trimmed);
+  } else {
+    localStorage.removeItem(STORAGE_KEY_SENIOR_NAME);
+  }
+}
+
+/**
+ * 呼び名を最初に1回だけ聞く（登録済みで、まだ聞いていないときだけ）
+ */
+const STORAGE_KEY_NAME_ASKED = 'magonotec_name_asked';
+
+function setupNameAsk() {
+  const modal = document.getElementById('name-ask-modal');
+  const input = document.getElementById('name-ask-input');
+  const btnOk = document.getElementById('btn-name-ask-ok');
+  const btnSkip = document.getElementById('btn-name-ask-skip');
+  if (!modal || !input || !btnOk || !btnSkip) return;
+
+  if (!hasValidPairing() || getSeniorName() || localStorage.getItem(STORAGE_KEY_NAME_ASKED)) return;
+
+  const finish = (name) => {
+    setSeniorName(name);
+    localStorage.setItem(STORAGE_KEY_NAME_ASKED, '1');
+    const settingsInput = document.getElementById('setting-senior-name');
+    if (settingsInput) settingsInput.value = getSeniorName();
+    modal.setAttribute('aria-hidden', 'true');
+  };
+
+  btnOk.addEventListener('click', () => finish(input.value));
+  btnSkip.addEventListener('click', () => finish(''));
+  modal.setAttribute('aria-hidden', 'false');
 }
 
 /**
@@ -2470,6 +2512,9 @@ function init() {
   const settings = loadSettings();
   applySettings(settings);
   setupSettingsUI(settings);
+
+  // 呼び名を最初に1回だけ聞く
+  setupNameAsk();
 
   // STEP15: 画像アップロード機能の初期化
   setupImageUpload();
