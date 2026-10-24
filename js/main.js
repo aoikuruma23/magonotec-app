@@ -93,6 +93,101 @@ function hasValidPairing() {
   return pairingId !== null && pairingId.length > 0;
 }
 
+// ============================================
+// STEP28: 認めた端末だけ使える
+// ============================================
+
+const STORAGE_KEY_DEVICE_TOKEN = 'magonotec_device_token';
+
+const DEVICE_PENDING_TEXT = 'この端末は、まだ使えないよ。\n\n' +
+  'ご家族にお知らせのメールを送ったよ。\n' +
+  'ご家族が「許可する」を押してくれたら、使えるようになるよ。';
+
+/**
+ * この端末の識別子（ランダム。初めてのときに作って、端末の中にだけ保存する）
+ * @returns {string}
+ */
+function getDeviceToken() {
+  let token = localStorage.getItem(STORAGE_KEY_DEVICE_TOKEN);
+  if (!token || !/^[A-Za-z0-9_-]{32,128}$/.test(token)) {
+    const bytes = new Uint8Array(32);
+    crypto.getRandomValues(bytes);
+    token = btoa(String.fromCharCode(...bytes))
+      .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    localStorage.setItem(STORAGE_KEY_DEVICE_TOKEN, token);
+  }
+  return token;
+}
+
+/**
+ * API の返事が「この端末はご家族の許可待ち」か
+ * @param {Response} response
+ * @returns {Promise<boolean>}
+ */
+async function isDevicePending(response) {
+  if (response.status !== 403) return false;
+  try {
+    const data = await response.clone().json();
+    return data && data.detail === 'device_pending';
+  } catch (e) {
+    return false;
+  }
+}
+
+/**
+ * 「ご家族の許可待ち」の画面を出す
+ */
+function showDeviceWait() {
+  const modal = document.getElementById('device-wait-modal');
+  if (modal) modal.setAttribute('aria-hidden', 'false');
+}
+
+/**
+ * この端末が使えるかを確かめる（初めての端末なら、ここで登録される）
+ * つながらないときは止めない（ほかの API が同じ確認をする）
+ * @returns {Promise<string>} 'approved' / 'pending' / 'unknown'
+ */
+async function checkDevice() {
+  const pairingId = getPairingId();
+  if (!pairingId) return 'unknown';
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/devices/check`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pairing_id: pairingId, device_token: getDeviceToken() }),
+    });
+    if (!response.ok) return 'unknown';
+    const data = await response.json();
+    return data.status === 'pending' ? 'pending' : 'approved';
+  } catch (e) {
+    console.warn('端末の確認に失敗:', e);
+    return 'unknown';
+  }
+}
+
+/**
+ * 「ご家族の許可待ち」の画面の［もう一度たしかめる］
+ */
+function setupDeviceWait() {
+  const modal = document.getElementById('device-wait-modal');
+  const btn = document.getElementById('btn-device-recheck');
+  const msg = document.getElementById('device-wait-message');
+  if (!modal || !btn) return;
+  btn.addEventListener('click', async () => {
+    btn.disabled = true;
+    if (msg) msg.textContent = 'たしかめています…';
+    const status = await checkDevice();
+    btn.disabled = false;
+    if (status === 'approved') {
+      modal.setAttribute('aria-hidden', 'true');
+      if (msg) msg.textContent = '';
+      setupNameAsk();
+    } else if (msg) {
+      msg.textContent = 'まだ許可されていないよ。少し待ってから、もう一度押してね。';
+    }
+  });
+}
+
 /**
  * STEP17-B: 未登録メッセージを表示（API呼び出しなし）
  */
@@ -126,7 +221,7 @@ async function recordUsage(pairingId) {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ pairing_id: pairingId }),
+      body: JSON.stringify({ pairing_id: pairingId, device_token: getDeviceToken() }),
     });
     console.log('利用記録を送信しました');
   } catch (error) {
@@ -2173,6 +2268,7 @@ async function scheduleAiReply(userText, image = null) {
       message: userText,
       history: historyForApi,
       pairing_id: pairingId,
+      device_token: getDeviceToken(),  // STEP28: 認めた端末だけ
     };
     if (image) {
       requestBody.image = image;
@@ -2204,6 +2300,10 @@ async function scheduleAiReply(userText, image = null) {
       // STEP19: レート制限エラーの場合は特別なメッセージ
       if (response.status === 429) {
         throw new Error('RATE_LIMIT');
+      }
+      // STEP28: この端末がまだ許可されていない
+      if (await isDevicePending(response)) {
+        throw new Error('DEVICE_PENDING');
       }
       // 400 (pairing_id欠如/形式不正) / 403 (有効なsubscriptionなし) は未登録導線へ
       if (response.status === 400 || response.status === 403) {
@@ -2292,7 +2392,11 @@ async function scheduleAiReply(userText, image = null) {
     let showRetry = false;
     let showRegisterButton = false;
 
-    if (error.message === 'UNREGISTERED') {
+    if (error.message === 'DEVICE_PENDING') {
+      // STEP28: この端末はまだご家族に許可されていない
+      fallbackText = DEVICE_PENDING_TEXT;
+      showDeviceWait();
+    } else if (error.message === 'UNREGISTERED') {
       // 400/403: pairing_id無効・未登録など。固定文言で登録導線へ
       fallbackText = 'ご家族の登録が確認できなかったよ。\n\nわからなければ、ご家族に聞いてみてね。';
       showRegisterButton = true;
@@ -2513,8 +2617,17 @@ function init() {
   applySettings(settings);
   setupSettingsUI(settings);
 
-  // 呼び名を最初に1回だけ聞く
-  setupNameAsk();
+  // STEP28: この端末が使えるかを確かめる。許可待ちなら案内を出し、使えるなら呼び名を1回だけ聞く
+  setupDeviceWait();
+  if (hasValidPairing()) {
+    checkDevice().then((status) => {
+      if (status === 'pending') {
+        showDeviceWait();
+      } else {
+        setupNameAsk();
+      }
+    });
+  }
 
   // STEP15: 画像アップロード機能の初期化
   setupImageUpload();
@@ -2693,10 +2806,13 @@ async function sendGenkiCheckin() {
     const response = await fetch(`${API_BASE_URL}/api/genki/checkin`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pairing_id: pairingId }),
+      body: JSON.stringify({ pairing_id: pairingId, device_token: getDeviceToken() }),
       signal: controller.signal,
     });
 
+    if (await isDevicePending(response)) {
+      throw new Error('DEVICE_PENDING');
+    }
     if (response.status === 400 || response.status === 403) {
       throw new Error('UNREGISTERED');
     }
@@ -2715,9 +2831,14 @@ async function sendGenkiCheckin() {
     console.error('genki checkin error:', error);
     updateGenkiButton();
     if (message) {
-      message.innerHTML = error.message === 'UNREGISTERED'
-        ? 'ご家族の登録が確認できなかったよ。<br>わからなければ、ご家族に聞いてみてね。'
-        : 'うまく伝えられなかったよ。<br>少ししてから、もう一度押してみてね。';
+      if (error.message === 'DEVICE_PENDING') {
+        message.innerHTML = 'この端末は、まだ使えないよ。<br>ご家族にお知らせを送ったよ。';
+        showDeviceWait();
+      } else {
+        message.innerHTML = error.message === 'UNREGISTERED'
+          ? 'ご家族の登録が確認できなかったよ。<br>わからなければ、ご家族に聞いてみてね。'
+          : 'うまく伝えられなかったよ。<br>少ししてから、もう一度押してみてね。';
+      }
     }
   } finally {
     clearTimeout(timeoutId);
@@ -2874,8 +2995,12 @@ async function enablePush() {
         endpoint: json.endpoint,
         p256dh: json.keys && json.keys.p256dh,
         auth: json.keys && json.keys.auth,
+        device_token: getDeviceToken(),
       }),
     });
+    if (await isDevicePending(response)) {
+      throw new Error('DEVICE_PENDING');
+    }
     if (response.status === 400 || response.status === 403) {
       throw new Error('UNREGISTERED');
     }
@@ -2889,9 +3014,11 @@ async function enablePush() {
   } catch (error) {
     console.error('push subscribe error:', error);
     updatePushSettings();
-    message.innerHTML = error.message === 'UNREGISTERED'
-      ? 'ご家族の登録が確認できなかったよ。<br>わからなければ、ご家族に聞いてみてね。'
-      : 'うまく設定できなかったよ。<br>少ししてから、もう一度押してみてね。';
+    message.innerHTML = error.message === 'DEVICE_PENDING'
+      ? 'この端末は、まだ使えないよ。<br>ご家族にお知らせを送ったよ。'
+      : error.message === 'UNREGISTERED'
+        ? 'ご家族の登録が確認できなかったよ。<br>わからなければ、ご家族に聞いてみてね。'
+        : 'うまく設定できなかったよ。<br>少ししてから、もう一度押してみてね。';
   }
 }
 

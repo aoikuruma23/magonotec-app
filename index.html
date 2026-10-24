@@ -449,6 +449,18 @@
     </div>
   </div>
 
+  <!-- STEP28: この端末はご家族の許可待ち（親御さんは読むだけ。押すのは「もう一度たしかめる」だけ） -->
+  <div class="settings-modal" id="device-wait-modal" aria-hidden="true">
+    <div class="settings-modal__backdrop"></div>
+    <div class="settings-modal__content name-ask">
+      <h2 class="settings-modal__title">ご家族の許可を待っています</h2>
+      <p class="name-ask__text">この端末で使うには、ご家族の許可がいります。</p>
+      <p class="name-ask__text">ご家族にお知らせのメールを送りました。ご家族が「許可する」を押すと、使えるようになります。</p>
+      <button id="btn-device-recheck" class="name-ask__ok" type="button">もう一度たしかめる</button>
+      <p id="device-wait-message" class="settings-hint" aria-live="polite"></p>
+    </div>
+  </div>
+
   <script src="js/main.js"></script>
 </body>
 </html>
