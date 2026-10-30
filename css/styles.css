@@ -731,6 +731,22 @@ body {
   border-color: var(--color-pink);
 }
 
+/* 入力が 2000字に届いたときのお知らせ */
+.input-limit-note {
+  margin: 0;
+  padding: 8px 16px;
+  font-size: var(--font-size-small);
+  line-height: 1.5;
+  color: var(--color-text);
+  background-color: var(--color-bg);
+  border-top: 1px solid var(--color-pink);
+  flex-shrink: 0;
+}
+
+.input-limit-note[hidden] {
+  display: none;
+}
+
 /* 送信ボタン */
 .send-button {
   height: 48px;

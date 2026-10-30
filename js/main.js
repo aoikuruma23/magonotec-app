@@ -878,6 +878,8 @@ function handleVoiceResult(text) {
     } else {
       messageInput.value = text;
     }
+    // プログラムで入れた文字には maxlength が効かないので、ここで 2000字に切る
+    updateInputLimitNote(messageInput);
 
     // 入力欄にフォーカス
     messageInput.focus();
@@ -2516,7 +2518,28 @@ function clearInput() {
   const input = document.getElementById('message-input');
   if (input) {
     input.value = '';
+    updateInputLimitNote(input);
     input.focus();
+  }
+}
+
+/**
+ * 入力欄の上限（index.html の maxlength・サーバーの上限と同じ）
+ */
+const MAX_INPUT_CHARS = 2000;
+
+/**
+ * 入力が上限に届いたら「ここまでで切れているよ」を出す（超えていれば切る）
+ * 入力欄は超えた分を黙って切るので、貼り付けた文章の後ろが消えたことに気づけるように
+ * @param {HTMLTextAreaElement} input
+ */
+function updateInputLimitNote(input) {
+  if (input.value.length > MAX_INPUT_CHARS) {
+    input.value = input.value.slice(0, MAX_INPUT_CHARS);
+  }
+  const note = document.getElementById('input-limit-note');
+  if (note) {
+    note.hidden = input.value.length < MAX_INPUT_CHARS;
   }
 }
 
@@ -2609,6 +2632,11 @@ function setupChatEvents() {
       const text = messageInput ? messageInput.value : '';
       handleUserMessage(text);
     });
+  }
+
+  // 2000字に届いたらお知らせを出す（貼り付け・入力・削除のたびに確かめる）
+  if (messageInput) {
+    messageInput.addEventListener('input', () => updateInputLimitNote(messageInput));
   }
 
   // Enterキーは改行（LINEと同じ挙動）
