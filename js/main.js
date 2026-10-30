@@ -629,6 +629,44 @@ function setupImageUpload() {
 }
 
 /**
+ * 送る画像の長い辺（px）。AI は大きな画像も長い辺 2048px までに縮めて読むので、
+ * これ以上大きく送っても見え方は変わらない（通信が重くなるだけ）
+ */
+const IMAGE_MAX_EDGE = 2048;
+const IMAGE_JPEG_QUALITY = 0.85;
+
+/**
+ * 画像を長い辺 IMAGE_MAX_EDGE に縮めて JPEG にする（スマホの写真 2〜10MB → 普通は 1MB 未満）
+ * 縮められない形式のときは、元のまま返す（大きすぎればサーバーが 413 で断る）
+ * @param {string} dataUrl - "data:image/...;base64,..."
+ * @returns {Promise<string>} JPEG の dataUrl
+ */
+function shrinkImage(dataUrl) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const scale = Math.min(1, IMAGE_MAX_EDGE / Math.max(img.width, img.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        const ctx = canvas.getContext('2d');
+        // 透明な部分（PNG）が黒くならないように白で塗っておく
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', IMAGE_JPEG_QUALITY));
+      } catch (err) {
+        console.warn('画像を縮められませんでした。元のまま送ります');
+        resolve(dataUrl);
+      }
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
+
+/**
  * 選択された画像をBase64に変換してプレビュー表示
  * @param {File} file - 選択された画像ファイル
  */
@@ -642,14 +680,15 @@ function handleImageSelect(file) {
   const reader = new FileReader();
 
   reader.onload = (e) => {
-    const dataUrl = e.target.result; // "data:image/jpeg;base64,..."
-    // data:プレフィックスを除去してBase64部分のみ保存
-    const base64 = dataUrl.split(',')[1];
-    pendingImage = base64;
+    shrinkImage(e.target.result).then((dataUrl) => {
+      // data:プレフィックスを除去してBase64部分のみ保存
+      const base64 = dataUrl.split(',')[1];
+      pendingImage = base64;
 
-    // プレビュー表示
-    showImagePreview(dataUrl);
-    console.log('画像を選択しました');
+      // プレビュー表示
+      showImagePreview(dataUrl);
+      console.log('画像を選択しました');
+    });
   };
 
   reader.onerror = () => {
@@ -2301,6 +2340,10 @@ async function scheduleAiReply(userText, image = null) {
       if (response.status === 429) {
         throw new Error('RATE_LIMIT');
       }
+      // 写真が大きすぎた（サーバーの上限は 5MB）
+      if (response.status === 413) {
+        throw new Error('IMAGE_TOO_LARGE');
+      }
       // STEP28: この端末がまだ許可されていない
       if (await isDevicePending(response)) {
         throw new Error('DEVICE_PENDING');
@@ -2406,6 +2449,10 @@ async function scheduleAiReply(userText, image = null) {
         'たくさんお話しすぎちゃったみたい。\n' +
         '1分くらい待ってから、また話しかけてね 😊';
       // レート制限の場合はリトライボタンを表示しない
+    } else if (error.message === 'IMAGE_TOO_LARGE') {
+      fallbackText = 'ごめんね、写真が大きすぎて見られなかったよ。\n\n' +
+        '画面をそのまま撮った写真（スクリーンショット）で送ってみてね 😊';
+      // 同じ写真をもう一度送っても同じなので、リトライボタンは出さない
     } else if (error.name === 'AbortError') {
       // STEP20: タイムアウトエラー
       fallbackText = 'ごめんね、ちょっと時間がかかりすぎちゃったみたい。\n\n' +
